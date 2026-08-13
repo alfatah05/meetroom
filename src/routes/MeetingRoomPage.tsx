@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, type ReactNode } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useProjectStore } from "@/stores/project-store";
 import { useMeetingStore } from "@/stores/meeting-store";
@@ -33,6 +33,8 @@ export function MeetingRoomPage() {
   const pendingProposals = useMeetingStore((s) => s.pendingProposals);
   const approveProposal = useMeetingStore((s) => s.approveProposal);
   const rejectProposal = useMeetingStore((s) => s.rejectProposal);
+  const replyTarget = useMeetingStore((s) => s.replyTarget);
+  const setReplyTarget = useMeetingStore((s) => s.setReplyTarget);
 
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -306,15 +308,35 @@ export function MeetingRoomPage() {
               )}
 
               <div className="space-y-3">
-                {activeOpinions.map((o) => (
-                  <OpinionCard key={o.id} opinion={o} />
-                ))}
-                {thinking.map((t) => (
+                {(() => {
+                  const roots = activeOpinions.filter((o) => !o.replyToId);
+                  const byParent = new Map<string, typeof activeOpinions>();
+                  for (const o of activeOpinions) {
+                    if (!o.replyToId) continue;
+                    const list = byParent.get(o.replyToId) ?? [];
+                    list.push(o);
+                    byParent.set(o.replyToId, list);
+                  }
+                  function renderThread(parentId: string, depth: number): ReactNode {
+                    const kids = byParent.get(parentId) ?? [];
+                    return kids.map((child) => (
+                      <OpinionCard key={child.id} opinion={child} depth={depth}>
+                        {renderThread(child.id, depth + 1)}
+                      </OpinionCard>
+                    ));
+                  }
+                  return roots.map((o) => (
+                    <OpinionCard key={o.id} opinion={o} depth={0}>
+                      {renderThread(o.id, 1)}
+                    </OpinionCard>
+                  ));
+                })()}
+                {thinking.map((th) => (
                   <div
-                    key={t.personaId}
-                    className="rounded-lg border border-dashed border-border bg-card/50 px-4 py-3 text-sm text-muted animate-pulse"
+                    key={th.personaId}
+                    className="animate-pulse rounded-lg border border-dashed border-border bg-card/50 px-4 py-3 text-sm text-muted"
                   >
-                    {t.label}
+                    {th.label}
                   </div>
                 ))}
               </div>
@@ -333,6 +355,24 @@ export function MeetingRoomPage() {
 
             {/* Input */}
             <div className="border-t border-border bg-card px-4 py-3 sm:px-6">
+              {replyTarget && (
+                <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between rounded-md border border-accent/30 bg-accent-muted/20 px-3 py-1.5 text-xs">
+                  <span className="text-muted">
+                    {t("replyingTo")}:{" "}
+                    <span className="font-medium text-foreground">
+                      {PERSONA_LIBRARY.find((p) => p.id === replyTarget.personaId)?.name ??
+                        replyTarget.personaId}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="text-muted hover:text-foreground"
+                    onClick={() => setReplyTarget(null)}
+                  >
+                    {t("cancelReply")}
+                  </button>
+                </div>
+              )}
               <div className="mx-auto flex max-w-3xl gap-2">
                 <textarea
                   rows={1}

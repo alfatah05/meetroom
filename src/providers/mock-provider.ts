@@ -37,12 +37,19 @@ function pickStance(personaId: string, topic: string): Stance {
 
 function buildResponse(request: AIRequest): PersonaAIResponse {
   const { persona, topic } = request;
-  const stance = pickStance(persona.id, topic);
+  const locked = /LOCKED DECISIONS/i.test(request.projectContext || "");
+  let stance = pickStance(persona.id, topic);
+  // When locked decisions exist, avoid opposing settled direction — lean support/info
+  if (locked && (stance === "oppose" || stance === "concern")) {
+    stance = persona.id === "judge" ? "information" : "support";
+  }
   const id = request.language === "id";
 
   const templatesEn: Record<Stance, { main: string; reasoning: string; rec?: string }> = {
     support: {
-      main: `${topic.replace(/\?$/, "")} aligns with our priorities for this stage.`,
+      main: locked
+        ? `We should proceed based on the locked decisions already made and focus on next steps for: ${topic.replace(/\?$/, "")}.`
+        : `${topic.replace(/\?$/, "")} aligns with our priorities for this stage.`,
       reasoning: `As ${persona.role}, I focus on ${persona.priorities.slice(0, 2).join(" and ")}. Given the project constraints and ${persona.experienceLevel} experience with ${persona.domainKnowledge[0] || "this domain"}, the upside outweighs the complexity if we keep scope tight.`,
       rec: "Proceed with a minimal version and validate quickly.",
     },
@@ -69,7 +76,9 @@ function buildResponse(request: AIRequest): PersonaAIResponse {
 
   const templatesId: Record<Stance, { main: string; reasoning: string; rec?: string }> = {
     support: {
-      main: `${topic.replace(/\?$/, "")} sejalan dengan prioritas kita di tahap ini.`,
+      main: locked
+        ? `Kita sebaiknya lanjut berdasarkan keputusan yang sudah dikunci, dan fokus ke langkah berikutnya untuk: ${topic.replace(/\?$/, "")}.`
+        : `${topic.replace(/\?$/, "")} sejalan dengan prioritas kita di tahap ini.`,
       reasoning: `Sebagai ${persona.role}, saya fokus pada ${persona.priorities.slice(0, 2).join(" dan ")}. Dengan batasan proyek dan pengalaman ${persona.experienceLevel} di ${persona.domainKnowledge[0] || "domain ini"}, manfaatnya lebih besar daripada kompleksitasnya jika scope tetap ketat.`,
       rec: "Lanjutkan dengan versi minimal dan validasi cepat.",
     },

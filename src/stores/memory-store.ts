@@ -153,13 +153,10 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
     if (m.preferences.length)
       lines.push("Preferences: " + m.preferences.slice(0, maxItems).join("; "));
     if (m.decisions.length) {
-      lines.push(
-        "Recent decisions: " +
-          m.decisions
-            .slice(0, maxItems)
-            .map((d) => d.title)
-            .join("; ")
-      );
+      lines.push("## LOCKED DECISIONS (do not contradict)");
+      for (const d of m.decisions.slice(0, maxItems * 2)) {
+        lines.push(`- ${d.title}${d.reason ? ` — ${d.reason}` : ""}`);
+      }
     }
     if (m.openQuestions.length)
       lines.push("Open questions: " + m.openQuestions.slice(0, maxItems).join("; "));

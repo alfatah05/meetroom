@@ -50,6 +50,10 @@ interface MeetingState {
   addDecision: (title: string, reason: string) => void;
   addOpenQuestion: (q: string) => void;
   clearError: () => void;
+  /** Reply mode: only this persona answers, same topic, under the parent card */
+  replyTarget: { opinionId: string; personaId: string } | null;
+  setReplyTarget: (target: { opinionId: string; personaId: string } | null) => void;
+  applyOpinionAsDecision: (opinionId: string) => void;
 
   pendingProposals: PendingProposal[];
   approveProposal: (id: string) => Promise<void>;
@@ -80,6 +84,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
   viewMode: "discussion",
   error: null,
   pendingProposals: [],
+  replyTarget: null,
 
   startMeeting: (projectId, title, mode = "normal") => {
     const project = useProjectStore.getState().projects.find((p) => p.id === projectId);
@@ -107,6 +112,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
       viewMode: "discussion",
       error: null,
       pendingProposals: [],
+      replyTarget: null,
     });
     void storage.saveMeeting(meeting);
     void storage.setSetting(`meeting-session:${projectId}`, {
@@ -205,6 +211,22 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
   setViewMode: (mode) => set({ viewMode: mode }),
   setActiveTopic: (topicId) => set({ activeTopicId: topicId }),
   clearError: () => set({ error: null }),
+  setReplyTarget: (target) => set({ replyTarget: target }),
+  applyOpinionAsDecision: (opinionId) => {
+    const op = get().opinions.find((o) => o.id === opinionId);
+    if (!op) return;
+    const persona = PERSONA_LIBRARY.find((x) => x.id === op.personaId);
+    const title =
+      (op.recommendation && op.recommendation.trim()) ||
+      op.mainPoint.trim();
+    const reason = [
+      persona ? `From ${persona.name}` : "",
+      op.reasoning?.slice(0, 280),
+    ]
+      .filter(Boolean)
+      .join(" — ");
+    get().addDecision(title, reason || "Applied from AI suggestion");
+  },
 
   addDecision: (title, reason) => {
     const m = get().meeting;
@@ -243,6 +265,13 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     };
     set((s) => ({ decisions: [...s.decisions, d] }));
     void useDecisionStore.getState().addDecision(d);
+    // Keep memory in sync so later prompts always see this decision
+    void useMemoryStore.getState().syncFromMeeting({
+      projectId: m.projectId,
+      decisions: [...get().decisions, d],
+      openQuestions: get().openQuestions,
+    });
+    get().persistSession();
   },
 
   addOpenQuestion: (q) => {
@@ -269,28 +298,54 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
       return;
     }
 
-    // Create or reuse topic
-    let topic = get().topics.find((t) => t.title.toLowerCase() === trimmed.toLowerCase());
-    if (!topic) {
-      topic = {
-        id: uuid(),
-        meetingId: m.id,
-        title: trimmed,
-        stanceSummary: emptyStanceSummary(),
-        createdAt: new Date().toISOString(),
-      };
-      set((s) => ({
-        topics: [...s.topics, topic!],
-        activeTopicId: topic!.id,
-        meeting: s.meeting
-          ? { ...s.meeting, topicIds: [...s.meeting.topicIds, topic!.id] }
-          : s.meeting,
-      }));
-    } else {
+    const replyTarget = get().replyTarget;
+    const parentOpinion = replyTarget
+      ? get().opinions.find((o) => o.id === replyTarget.opinionId)
+      : undefined;
+
+    // Reply mode: stay on same topic; otherwise create/reuse topic from text
+    let topic: Topic | undefined;
+    if (replyTarget && parentOpinion) {
+      topic = get().topics.find((x) => x.id === parentOpinion.topicId);
+      if (!topic) {
+        set({ error: "Parent topic not found for reply." });
+        return;
+      }
       set({ activeTopicId: topic.id });
+    } else {
+      topic = get().topics.find((x) => x.title.toLowerCase() === trimmed.toLowerCase());
+      if (!topic) {
+        topic = {
+          id: uuid(),
+          meetingId: m.id,
+          title: trimmed,
+          stanceSummary: emptyStanceSummary(),
+          createdAt: new Date().toISOString(),
+        };
+        set((s) => ({
+          topics: [...s.topics, topic!],
+          activeTopicId: topic!.id,
+          meeting: s.meeting
+            ? { ...s.meeting, topicIds: [...s.meeting.topicIds, topic!.id] }
+            : s.meeting,
+        }));
+      } else {
+        set({ activeTopicId: topic.id });
+      }
     }
 
-    const participants = selectParticipants(hired, trimmed, m.mode);
+    // Reply: only the targeted persona. Otherwise moderator picks participants.
+    let participants: Persona[];
+    if (replyTarget) {
+      const one = hired.find((p) => p.id === replyTarget.personaId);
+      if (!one) {
+        set({ error: "Persona for reply is not on the team." });
+        return;
+      }
+      participants = [one];
+    } else {
+      participants = selectParticipants(hired, trimmed, m.mode);
+    }
     // Ensure memory loaded for context retrieval
     const memStore = useMemoryStore.getState();
     if (!memStore.byProject[m.projectId]) {
@@ -301,18 +356,51 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     const techList = project.constraints.technology?.length
       ? project.constraints.technology.join(", ")
       : "(not fixed yet — feel free to suggest)";
-    const projectContext = [
+
+    // Decisions already made by the user are LOCKED — AI must respect them
+    const sessionDecisions = get().decisions;
+    const projectDecisions = useDecisionStore.getState().byProject[m.projectId] ?? [];
+    const decisionMap = new Map<string, string>();
+    for (const d of projectDecisions) decisionMap.set(d.id, d.title + (d.reason ? ` (${d.reason})` : ""));
+    for (const d of sessionDecisions) decisionMap.set(d.id, d.title + (d.reason ? ` (${d.reason})` : ""));
+    const lockedLines = Array.from(decisionMap.values());
+    const lockedBlock =
+      lockedLines.length > 0
+        ? [
+            "## LOCKED DECISIONS (already approved by the user — DO NOT re-open or contradict)",
+            ...lockedLines.map((line, i) => `${i + 1}. ${line}`),
+            "If the topic relates to a locked decision, acknowledge it is settled and advance the discussion (implementation details, next steps, risks of the chosen path) instead of suggesting the rejected alternative.",
+          ].join("\n")
+        : "";
+
+    let projectContext = [
       `Project: ${project.name}`,
       `Starting description (editable with user approval): ${project.description || "(empty)"}`,
       project.problem ? `Problem: ${project.problem}` : "",
       project.targetUsers ? `Users: ${project.targetUsers}` : "",
       `Starting technical constraints (editable with user approval): ${project.constraints.technicalConstraints || "(none)"}`,
       `Technology so far: ${techList}`,
-      "Note: description and constraints are starting points for discussion, not rigid rules.",
+      "Note: description and constraints are starting points for discussion, not rigid rules — BUT locked decisions above override them.",
+      lockedBlock,
       memorySnippet,
     ]
       .filter(Boolean)
       .join("\n");
+
+    if (parentOpinion) {
+      const parentPersona = PERSONA_LIBRARY.find((x) => x.id === parentOpinion.personaId);
+      projectContext += [
+        "",
+        "## REPLY CONTEXT (user is following up on YOUR earlier opinion — answer in character, deepen this thread)",
+        `Your earlier point: ${parentOpinion.mainPoint}`,
+        parentOpinion.reasoning ? `Your earlier reasoning: ${parentOpinion.reasoning}` : "",
+        parentOpinion.recommendation ? `Your earlier recommendation: ${parentOpinion.recommendation}` : "",
+        `User follow-up: ${trimmed}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      void parentPersona;
+    }
 
     // Thinking indicators
     const localeMod = await import("@/stores/locale-store");
@@ -337,6 +425,22 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
       });
 
     const newOpinions: Opinion[] = [];
+
+    // User message in reply thread (shown under the parent card)
+    if (replyTarget && parentOpinion) {
+      const userOp: Opinion = {
+        id: uuid(),
+        topicId: topic!.id,
+        meetingId: m.id,
+        personaId: "__user__",
+        stance: "information",
+        mainPoint: trimmed,
+        reasoning: "",
+        createdAt: new Date().toISOString(),
+        replyToId: parentOpinion.id,
+      };
+      set((s) => ({ opinions: [...s.opinions, userOp] }));
+    }
 
     // Sequential for clearer UX (one after another)
     for (const persona of participants) {
@@ -370,6 +474,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
           recommendation: res.content.recommendation,
           confidence: res.content.confidence,
           createdAt: new Date().toISOString(),
+          replyToId: parentOpinion?.id,
         };
         newOpinions.push(op);
         const newProposals: PendingProposal[] = [];
@@ -421,7 +526,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
       }
     }
 
-    set({ thinking: [] });
+    set({ thinking: [], replyTarget: null });
     get().persistSession();
 
     // Light auto open-questions / decisions hints for overview

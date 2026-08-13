@@ -6,18 +6,28 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
-  AlertTriangle,
   X,
   HelpCircle,
   Info,
+  Reply,
+  CheckCircle2,
+  User,
 } from "lucide-react";
+import * as LucideAll from "lucide-react";
 import { PersonaAvatar } from "@/components/persona/PersonaAvatar";
 import { useLocaleStore } from "@/stores/locale-store";
+import { useMeetingStore } from "@/stores/meeting-store";
+import { Button } from "@/components/ui/button";
 import type { TranslationKey } from "@/i18n/translations";
+import type { LucideIcon } from "lucide-react";
+
+const lucideMap = LucideAll as unknown as Record<string, LucideIcon>;
+const AlertIcon: LucideIcon =
+  lucideMap.TriangleAlert || lucideMap.AlertTriangle || HelpCircle;
 
 const STANCE_META: Record<
   Stance,
-  { labelKey: TranslationKey; Icon: typeof Check; className: string; bg: string }
+  { labelKey: TranslationKey; Icon: LucideIcon; className: string; bg: string }
 > = {
   support: {
     labelKey: "support",
@@ -27,7 +37,7 @@ const STANCE_META: Record<
   },
   concern: {
     labelKey: "concern",
-    Icon: AlertTriangle,
+    Icon: AlertIcon,
     className: "text-concern",
     bg: "bg-concern-bg",
   },
@@ -51,15 +61,51 @@ const STANCE_META: Record<
   },
 };
 
-export function OpinionCard({ opinion }: { opinion: Opinion }) {
+export function OpinionCard({
+  opinion,
+  depth = 0,
+  children,
+}: {
+  opinion: Opinion;
+  depth?: number;
+  children?: React.ReactNode;
+}) {
   const [open, setOpen] = useState(false);
-  const persona = PERSONA_LIBRARY.find((p) => p.id === opinion.personaId);
+  const [applied, setApplied] = useState(false);
+  const isUser = opinion.personaId === "__user__";
+  const persona = isUser ? null : PERSONA_LIBRARY.find((p) => p.id === opinion.personaId);
   const meta = STANCE_META[opinion.stance];
   const t = useLocaleStore((s) => s.t);
   const Icon = meta.Icon;
+  const setReplyTarget = useMeetingStore((s) => s.setReplyTarget);
+  const replyTarget = useMeetingStore((s) => s.replyTarget);
+  const applyOpinionAsDecision = useMeetingStore((s) => s.applyOpinionAsDecision);
+  const meeting = useMeetingStore((s) => s.meeting);
+  const active = meeting?.status === "active";
+
+  const isReplyTarget = replyTarget?.opinionId === opinion.id;
+
+  if (isUser) {
+    return (
+      <div className={cn("mt-2 rounded-md border border-border/80 bg-background/80 px-3 py-2", depth > 0 && "ml-4 border-l-2 border-l-accent/40")}>
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          <User className="h-3.5 w-3.5" />
+          {t("you")}
+        </div>
+        <p className="mt-1 text-sm text-foreground">{opinion.mainPoint}</p>
+        {children}
+      </div>
+    );
+  }
 
   return (
-    <article className="rounded-md border border-border bg-card p-4">
+    <article
+      className={cn(
+        "rounded-md border border-border bg-card p-4",
+        depth > 0 && "ml-4 border-l-2 border-l-accent/30",
+        isReplyTarget && "ring-1 ring-accent/50"
+      )}
+    >
       <div className="flex items-start gap-3">
         <PersonaAvatar avatar={persona?.avatar} size="sm" />
         <div className="min-w-0 flex-1">
@@ -116,6 +162,39 @@ export function OpinionCard({ opinion }: { opinion: Opinion }) {
               )}
             </div>
           )}
+
+          {active && !isUser && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant={isReplyTarget ? "primary" : "outline"}
+                onClick={() =>
+                  setReplyTarget(
+                    isReplyTarget
+                      ? null
+                      : { opinionId: opinion.id, personaId: opinion.personaId }
+                  )
+                }
+              >
+                <Reply className="h-3.5 w-3.5" />
+                {isReplyTarget ? t("cancelReply") : t("reply")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={applied}
+                onClick={() => {
+                  applyOpinionAsDecision(opinion.id);
+                  setApplied(true);
+                }}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {applied ? t("appliedDecision") : t("apply")}
+              </Button>
+            </div>
+          )}
+
+          {children}
         </div>
       </div>
     </article>

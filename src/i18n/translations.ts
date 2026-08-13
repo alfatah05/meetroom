@@ -178,6 +178,12 @@ export const translations = {
     pendingApprovals: "Pending approvals",
     participants: "participants",
     contributions: "contributions",
+    reply: "Reply",
+    apply: "Apply",
+    cancelReply: "Cancel reply",
+    replyingTo: "Replying to",
+    you: "You",
+    appliedDecision: "Applied as decision",
   },
   id: {
     appName: "Council",
@@ -356,6 +362,12 @@ export const translations = {
     pendingApprovals: "Menunggu persetujuan",
     participants: "peserta",
     contributions: "kontribusi",
+    reply: "Balas",
+    apply: "Terapkan",
+    cancelReply: "Batal balas",
+    replyingTo: "Membalas",
+    you: "Anda",
+    appliedDecision: "Diterapkan sebagai keputusan",
   },
 } as const;
 

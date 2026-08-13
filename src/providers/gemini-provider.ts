@@ -45,6 +45,10 @@ Rules:
   you MAY include "proposedProjectUpdate" (user must approve before it applies).
 - If the discussion reaches a clear conclusion, you MAY include "proposedDecision" (user must approve).
 - Do not treat starting constraints as unchangeable dogma.
+- LOCKED DECISIONS in the project context are final for this discussion.
+  Never recommend going back on them or re-arguing alternatives the user already rejected or settled.
+  Build on top of locked decisions (next steps, risks of the chosen path, implementation).
+  Only propose a new decision if it does not contradict locked ones.
 ${languageInstruction(request.language)}
 - Respond ONLY with valid JSON matching this schema:
 {
@@ -76,7 +80,7 @@ ${request.topic}
 ${prev}
 ${langHint}
 
-Provide your perspective as JSON only.`;
+Respect any LOCKED DECISIONS listed above. Provide your perspective as JSON only.`;
 }
 
 function parseResponse(text: string): PersonaAIResponse {
