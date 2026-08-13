@@ -18,7 +18,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20, 22]
+        # Node 20 deprecated on GitHub Actions runners (EOL Apr 2026).
+        # Use 22 (LTS) and 24.
+        node-version: [22, 24]
 
     steps:
       - name: Checkout
@@ -37,14 +39,17 @@ jobs:
         run: npm run build
 
       - name: Upload dist artifact
-        if: matrix.node-version == 20
+        # Upload only from one matrix job to avoid duplicate artifact names
+        if: matrix.node-version == 22
         uses: actions/upload-artifact@v4
         with:
           name: council-dist
           path: dist/
           retention-days: 14
 
-  # Optional: deploy dist to GitHub Pages (enable in repo Settings → Pages → GitHub Actions)
+  # Deploy dist to GitHub Pages
+  # IMPORTANT: Enable Pages first!
+  #   Repo → Settings → Pages → Build and deployment → Source: "GitHub Actions"
   deploy-pages:
     name: Deploy to GitHub Pages
     needs: build
