@@ -10,6 +10,7 @@ import { stageLabel, formatRelativeTime } from "@/lib/utils";
 import { ArrowLeft, Users, MessageSquare, Plus, CheckCircle2, Download } from "lucide-react";
 import { PersonaAvatar } from "@/components/persona/PersonaAvatar";
 import { useLocaleStore } from "@/stores/locale-store";
+import { useMeetingStore } from "@/stores/meeting-store";
 import { exportProject, downloadExport } from "@/lib/export-import";
 
 export function ProjectPage() {
@@ -31,6 +32,13 @@ export function ProjectPage() {
   const decisions = id ? byProject[id] ?? [] : [];
   const [ioMsg, setIoMsg] = useState<string | null>(null);
   const t = useLocaleStore((s) => s.t);
+  const resumeMeeting = useMeetingStore((s) => s.resumeMeeting);
+  const [hasActiveMeeting, setHasActiveMeeting] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    void resumeMeeting(id).then((ok) => setHasActiveMeeting(ok));
+  }, [id, resumeMeeting]);
 
   async function onExport() {
     if (!id) return;
@@ -100,20 +108,27 @@ export function ProjectPage() {
               <Users className="h-3.5 w-3.5" />
               {t("manageTeam")}
             </Button>
+            {hasActiveMeeting ? (
+              <Button to={`/project/${id}/meeting`} size="sm">
+                <MessageSquare className="h-3.5 w-3.5" />
+                {t("resumeMeeting")}
+              </Button>
+            ) : (
+              <Button to={`/project/${id}/meeting`} variant="outline" size="sm">
+                <MessageSquare className="h-3.5 w-3.5" />
+                {t("startMeeting")}
+              </Button>
+            )}
             <Button to={`/project/${id}/decisions`} variant="outline" size="sm">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Decisions
+              {t("decisions")}
             </Button>
             <Button to={`/project/${id}/memory`} variant="outline" size="sm">
-              Memory
-            </Button>
-            <Button to={`/project/${id}/meeting`} size="sm">
-              <MessageSquare className="h-3.5 w-3.5" />
-              Start meeting
+              {t("memory")}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => void onExport()}>
               <Download className="h-3.5 w-3.5" />
-              Export
+              {t("export")}
             </Button>
           </div>
         </div>

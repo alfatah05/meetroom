@@ -39,6 +39,12 @@ Rules:
 - Do not invent sources or research.
 - Challenge assumptions when justified; do not disagree for sport.
 - Keep mainPoint to 1-2 sentences.
+- Project description and technical constraints are STARTING CONTEXT only — not hard locks.
+  Explore alternatives, challenge them when useful, and discuss trade-offs freely so the conversation feels natural.
+- If the discussion clearly converges on a better project description, technical constraints, or technology stack,
+  you MAY include "proposedProjectUpdate" (user must approve before it applies).
+- If the discussion reaches a clear conclusion, you MAY include "proposedDecision" (user must approve).
+- Do not treat starting constraints as unchangeable dogma.
 ${languageInstruction(request.language)}
 - Respond ONLY with valid JSON matching this schema:
 {
@@ -84,7 +90,7 @@ function parseResponse(text: string): PersonaAIResponse {
   const stance = STANCES.includes(data.stance as Stance)
     ? (data.stance as Stance)
     : "information";
-  return {
+  const result: PersonaAIResponse = {
     stance,
     mainPoint: String(data.mainPoint ?? "No clear point provided."),
     reasoning: String(data.reasoning ?? ""),
@@ -95,6 +101,23 @@ function parseResponse(text: string): PersonaAIResponse {
         ? Math.min(1, Math.max(0, data.confidence))
         : 0.7,
   };
+  const pu = (data as { proposedProjectUpdate?: PersonaAIResponse["proposedProjectUpdate"] }).proposedProjectUpdate;
+  if (pu && typeof pu === "object" && pu.reason) {
+    result.proposedProjectUpdate = {
+      description: pu.description ? String(pu.description) : undefined,
+      technicalConstraints: pu.technicalConstraints ? String(pu.technicalConstraints) : undefined,
+      technology: Array.isArray(pu.technology) ? pu.technology.map(String) : undefined,
+      reason: String(pu.reason),
+    };
+  }
+  const pd = (data as { proposedDecision?: PersonaAIResponse["proposedDecision"] }).proposedDecision;
+  if (pd && typeof pd === "object" && pd.title) {
+    result.proposedDecision = {
+      title: String(pd.title),
+      reason: String(pd.reason ?? ""),
+    };
+  }
+  return result;
 }
 
 export class GeminiProvider implements AIProvider {

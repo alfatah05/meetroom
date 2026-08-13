@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMeetingStore } from "@/stores/meeting-store";
+import { useLocaleStore } from "@/stores/locale-store";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,8 @@ export function MeetingHeader({
   const viewMode = useMeetingStore((s) => s.viewMode);
   const setViewMode = useMeetingStore((s) => s.setViewMode);
   const endMeeting = useMeetingStore((s) => s.endMeeting);
+  const persistSession = useMeetingStore((s) => s.persistSession);
+  const t = useLocaleStore((s) => s.t);
 
   if (!meeting) return null;
 
@@ -28,6 +31,7 @@ export function MeetingHeader({
         <div className="min-w-0">
           <Link
             to={`/project/${projectId}`}
+            onClick={() => persistSession()}
             className="inline-flex items-center gap-1 text-xs text-muted hover:text-foreground"
           >
             <ArrowLeft className="h-3 w-3" />
@@ -35,18 +39,27 @@ export function MeetingHeader({
           </Link>
           <h1 className="mt-0.5 truncate text-lg font-semibold tracking-tight">{meeting.title}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-            <span>{meeting.participantIds.length} participants</span>
+            <span>
+              {meeting.participantIds.length} {t("participants")}
+            </span>
             <span>·</span>
-            <span>{opinions.length} contributions</span>
+            <span>
+              {opinions.length} {t("contributions")}
+            </span>
             <span>·</span>
-            <span>{decisions.length} decisions</span>
+            <span>
+              {decisions.length} {t("decisions").toLowerCase()}
+            </span>
             <span className="inline-flex items-center gap-1">
               <Circle
                 className={cn("h-2 w-2 fill-current", active ? "text-support" : "text-muted")}
               />
-              {active ? "Meeting active" : "Ended"}
+              {active ? t("meetingActive") : t("meetingEnded")}
             </span>
           </div>
+          {active && (
+            <p className="mt-1 text-[11px] text-muted-foreground">{t("leaveMeetingHint")}</p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-md border border-border p-0.5 text-xs">
@@ -55,25 +68,35 @@ export function MeetingHeader({
               onClick={() => setViewMode("discussion")}
               className={cn(
                 "rounded px-2.5 py-1 transition-colors",
-                viewMode === "discussion" ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"
+                viewMode === "discussion"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted hover:text-foreground"
               )}
             >
-              Discussion
+              {t("discussion")}
             </button>
             <button
               type="button"
               onClick={() => setViewMode("overview")}
               className={cn(
                 "rounded px-2.5 py-1 transition-colors",
-                viewMode === "overview" ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"
+                viewMode === "overview"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted hover:text-foreground"
               )}
             >
-              Overview
+              {t("overview")}
             </button>
           </div>
           {active && (
-            <Button variant="outline" size="sm" onClick={() => endMeeting()}>
-              End meeting
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                endMeeting();
+              }}
+            >
+              {t("endMeeting")}
             </Button>
           )}
         </div>

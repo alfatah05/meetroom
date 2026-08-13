@@ -7,6 +7,7 @@ import type {
   MeetingMode,
   Persona,
   Stance,
+  PendingProposal,
 } from "@/types";
 import { PERSONA_LIBRARY } from "@/data/personas";
 import { providerManager } from "@/providers/provider-manager";
@@ -37,6 +38,10 @@ interface MeetingState {
 
   startMeeting: (projectId: string, title: string, mode?: MeetingMode) => void;
   endMeeting: () => void;
+  /** Load persisted active session for a project (does not end meeting on navigate away) */
+  resumeMeeting: (projectId: string) => Promise<boolean>;
+  /** Persist current session without ending */
+  persistSession: () => void;
   setViewMode: (mode: "discussion" | "overview") => void;
 
   /** User submits a question / thought — moderator picks personas & generates opinions */
@@ -45,6 +50,10 @@ interface MeetingState {
   addDecision: (title: string, reason: string) => void;
   addOpenQuestion: (q: string) => void;
   clearError: () => void;
+
+  pendingProposals: PendingProposal[];
+  approveProposal: (id: string) => Promise<void>;
+  rejectProposal: (id: string) => void;
 }
 
 function emptyStanceSummary() {
@@ -70,6 +79,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
   thinking: [],
   viewMode: "discussion",
   error: null,
+  pendingProposals: [],
 
   startMeeting: (projectId, title, mode = "normal") => {
     const project = useProjectStore.getState().projects.find((p) => p.id === projectId);
@@ -96,15 +106,77 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
       thinking: [],
       viewMode: "discussion",
       error: null,
+      pendingProposals: [],
     });
+    void storage.saveMeeting(meeting);
+    void storage.setSetting(`meeting-session:${projectId}`, {
+      meeting,
+      topics: [],
+      activeTopicId: null,
+      opinions: [],
+      decisions: [],
+      openQuestions: [],
+      actionItems: [],
+      pendingProposals: [],
+      viewMode: "discussion",
+    });
+  },
+
+
+  persistSession: () => {
+    const s = get();
+    if (!s.meeting || s.meeting.status !== "active") return;
+    const payload = {
+      meeting: s.meeting,
+      topics: s.topics,
+      activeTopicId: s.activeTopicId,
+      opinions: s.opinions,
+      decisions: s.decisions,
+      openQuestions: s.openQuestions,
+      actionItems: s.actionItems,
+      pendingProposals: s.pendingProposals,
+      viewMode: s.viewMode,
+    };
+    void storage.setSetting(`meeting-session:${s.meeting.projectId}`, payload);
+    void storage.saveMeeting(s.meeting);
+  },
+
+  resumeMeeting: async (projectId) => {
+    const data = await storage.getSetting<{
+      meeting: Meeting;
+      topics: Topic[];
+      activeTopicId: string | null;
+      opinions: Opinion[];
+      decisions: Decision[];
+      openQuestions: string[];
+      actionItems: string[];
+      pendingProposals?: PendingProposal[];
+      viewMode?: "discussion" | "overview";
+    }>(`meeting-session:${projectId}`);
+    if (!data?.meeting || data.meeting.status !== "active") return false;
+    set({
+      meeting: data.meeting,
+      topics: data.topics ?? [],
+      activeTopicId: data.activeTopicId ?? null,
+      opinions: data.opinions ?? [],
+      decisions: data.decisions ?? [],
+      openQuestions: data.openQuestions ?? [],
+      actionItems: data.actionItems ?? [],
+      pendingProposals: data.pendingProposals ?? [],
+      viewMode: data.viewMode ?? "discussion",
+      thinking: [],
+      error: null,
+    });
+    return true;
   },
 
   endMeeting: () => {
     const m = get().meeting;
     if (!m) return;
     const ended = { ...m, status: "ended" as const, endedAt: new Date().toISOString() };
-    set({ meeting: ended });
+    set({ meeting: ended, pendingProposals: [] });
     void storage.saveMeeting(ended);
+    void storage.setSetting(`meeting-session:${m.projectId}`, null);
     const proj = useProjectStore.getState().projects.find((p) => p.id === m.projectId);
     if (proj) {
       void useProjectStore.getState().updateProject(m.projectId, {
@@ -226,14 +298,17 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     }
     const memorySnippet = memStore.getContextSnippet(m.projectId);
 
+    const techList = project.constraints.technology?.length
+      ? project.constraints.technology.join(", ")
+      : "(not fixed yet — feel free to suggest)";
     const projectContext = [
       `Project: ${project.name}`,
-      project.description,
+      `Starting description (editable with user approval): ${project.description || "(empty)"}`,
       project.problem ? `Problem: ${project.problem}` : "",
       project.targetUsers ? `Users: ${project.targetUsers}` : "",
-      project.constraints.technicalConstraints
-        ? `Tech constraints: ${project.constraints.technicalConstraints}`
-        : "",
+      `Starting technical constraints (editable with user approval): ${project.constraints.technicalConstraints || "(none)"}`,
+      `Technology so far: ${techList}`,
+      "Note: description and constraints are starting points for discussion, not rigid rules.",
       memorySnippet,
     ]
       .filter(Boolean)
@@ -297,6 +372,29 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
           createdAt: new Date().toISOString(),
         };
         newOpinions.push(op);
+        const newProposals: PendingProposal[] = [];
+        if (res.content.proposedProjectUpdate?.reason) {
+          newProposals.push({
+            id: uuid(),
+            meetingId: m.id,
+            personaId: persona.id,
+            personaName: persona.name,
+            createdAt: new Date().toISOString(),
+            kind: "project_update",
+            projectUpdate: res.content.proposedProjectUpdate,
+          });
+        }
+        if (res.content.proposedDecision?.title) {
+          newProposals.push({
+            id: uuid(),
+            meetingId: m.id,
+            personaId: persona.id,
+            personaName: persona.name,
+            createdAt: new Date().toISOString(),
+            kind: "decision",
+            decision: res.content.proposedDecision,
+          });
+        }
         set((s) => {
           const topics = s.topics.map((t) =>
             t.id === topic!.id
@@ -306,6 +404,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
           return {
             opinions: [...s.opinions, op],
             topics,
+            pendingProposals: [...s.pendingProposals, ...newProposals],
             meeting: s.meeting
               ? { ...s.meeting, contributionCount: s.meeting.contributionCount + 1 }
               : s.meeting,
@@ -323,11 +422,54 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     }
 
     set({ thinking: [] });
+    get().persistSession();
 
     // Light auto open-questions / decisions hints for overview
     const concerns = newOpinions.filter((o) => o.stance === "concern" || o.stance === "oppose");
     if (concerns.length >= 2) {
       get().addOpenQuestion(`Resolve concerns around: ${trimmed}`);
     }
+  },
+  approveProposal: async (id) => {
+    const prop = get().pendingProposals.find((p) => p.id === id);
+    if (!prop) return;
+    const m = get().meeting;
+    if (!m) return;
+    if (prop.kind === "decision" && prop.decision) {
+      get().addDecision(
+        prop.decision.title,
+        prop.decision.reason || `Proposed by ${prop.personaName}`
+      );
+    }
+    if (prop.kind === "project_update" && prop.projectUpdate) {
+      const pu = prop.projectUpdate;
+      const project = useProjectStore.getState().projects.find((x) => x.id === m.projectId);
+      if (project) {
+        const constraints = { ...project.constraints };
+        if (pu.technicalConstraints !== undefined) {
+          constraints.technicalConstraints = pu.technicalConstraints;
+        }
+        if (pu.technology) {
+          constraints.technology = pu.technology;
+        }
+        await useProjectStore.getState().updateProject(m.projectId, {
+          description: pu.description !== undefined ? pu.description : project.description,
+          constraints,
+        });
+        const title = pu.description
+          ? "Updated project description"
+          : pu.technology
+            ? `Updated technology: ${pu.technology.join(", ")}`
+            : "Updated technical constraints";
+        get().addDecision(title, pu.reason || `Approved proposal from ${prop.personaName}`);
+      }
+    }
+    set((s) => ({ pendingProposals: s.pendingProposals.filter((x) => x.id !== id) }));
+    get().persistSession();
+  },
+
+  rejectProposal: (id) => {
+    set((s) => ({ pendingProposals: s.pendingProposals.filter((x) => x.id !== id) }));
+    get().persistSession();
   },
 }));

@@ -178,6 +178,37 @@ export interface PersonaAIResponse {
   concerns?: string[];
   recommendation?: string;
   confidence?: number;
+  /** Optional: AI suggests updating project fields — needs user approval */
+  proposedProjectUpdate?: {
+    description?: string;
+    technicalConstraints?: string;
+    technology?: string[];
+    reason: string;
+  };
+  /** Optional: AI suggests a decision — needs user approval before it becomes official */
+  proposedDecision?: {
+    title: string;
+    reason: string;
+  };
+}
+
+export interface PendingProposal {
+  id: string;
+  meetingId: string;
+  personaId: string;
+  personaName: string;
+  createdAt: string;
+  kind: "project_update" | "decision";
+  projectUpdate?: {
+    description?: string;
+    technicalConstraints?: string;
+    technology?: string[];
+    reason: string;
+  };
+  decision?: {
+    title: string;
+    reason: string;
+  };
 }
 
 export interface ModeratorResult {

@@ -26,9 +26,13 @@ export function MeetingRoomPage() {
   const viewMode = useMeetingStore((s) => s.viewMode);
   const error = useMeetingStore((s) => s.error);
   const startMeeting = useMeetingStore((s) => s.startMeeting);
+  const resumeMeeting = useMeetingStore((s) => s.resumeMeeting);
   const submitThought = useMeetingStore((s) => s.submitThought);
   const setActiveTopic = useMeetingStore((s) => s.setActiveTopic);
   const clearError = useMeetingStore((s) => s.clearError);
+  const pendingProposals = useMeetingStore((s) => s.pendingProposals);
+  const approveProposal = useMeetingStore((s) => s.approveProposal);
+  const rejectProposal = useMeetingStore((s) => s.rejectProposal);
 
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -42,11 +46,15 @@ export function MeetingRoomPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    void hydrate().then(() => {
-      if (id) void setCurrentProject(id);
+    void hydrate().then(async () => {
+      if (id) {
+        void setCurrentProject(id);
+        const ok = await resumeMeeting(id);
+        if (ok) setStarted(true);
+      }
     });
     void hydrateProviders();
-  }, [hydrate, id, setCurrentProject, hydrateProviders]);
+  }, [hydrate, id, setCurrentProject, hydrateProviders, resumeMeeting]);
 
   useEffect(() => {
     let timer: number | undefined;
@@ -147,6 +155,7 @@ export function MeetingRoomPage() {
           >
             {t("enterMeetingRoom")}
           </Button>
+          <p className="mt-3 text-xs text-muted-foreground">{t("leaveMeetingHint")}</p>
         </div>
       </div>
     );
@@ -240,6 +249,62 @@ export function MeetingRoomPage() {
                 </div>
               )}
 
+              {pendingProposals.length > 0 && (
+                <div className="mb-4 space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted">
+                    {t("pendingApprovals")}
+                  </p>
+                  {pendingProposals.map((pr) => (
+                    <div
+                      key={pr.id}
+                      className="rounded-md border border-accent/30 bg-accent-muted/20 p-3 text-sm"
+                    >
+                      <p className="text-xs text-muted">
+                        {pr.personaName} ·{" "}
+                        {pr.kind === "decision" ? t("proposedDecision") : t("proposedUpdate")}
+                      </p>
+                      {pr.kind === "decision" && pr.decision && (
+                        <>
+                          <p className="mt-1 font-medium">{pr.decision.title}</p>
+                          <p className="mt-0.5 text-xs text-muted">{pr.decision.reason}</p>
+                        </>
+                      )}
+                      {pr.kind === "project_update" && pr.projectUpdate && (
+                        <>
+                          <p className="mt-1 text-xs text-muted">{pr.projectUpdate.reason}</p>
+                          {pr.projectUpdate.description && (
+                            <p className="mt-1 text-xs">
+                              <span className="text-muted">{t("description")}: </span>
+                              {pr.projectUpdate.description}
+                            </p>
+                          )}
+                          {pr.projectUpdate.technicalConstraints && (
+                            <p className="mt-1 text-xs">
+                              <span className="text-muted">{t("technicalConstraintsLabel")}: </span>
+                              {pr.projectUpdate.technicalConstraints}
+                            </p>
+                          )}
+                          {pr.projectUpdate.technology && (
+                            <p className="mt-1 text-xs">
+                              <span className="text-muted">{t("technologyLabel")}: </span>
+                              {pr.projectUpdate.technology.join(", ")}
+                            </p>
+                          )}
+                        </>
+                      )}
+                      <div className="mt-2 flex gap-2">
+                        <Button size="sm" onClick={() => void approveProposal(pr.id)}>
+                          {t("approve")}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => rejectProposal(pr.id)}>
+                          {t("reject")}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="space-y-3">
                 {activeOpinions.map((o) => (
                   <OpinionCard key={o.id} opinion={o} />
@@ -279,9 +344,9 @@ export function MeetingRoomPage() {
                       void onSend();
                     }
                   }}
-                  placeholder="Add your thought to the meeting..."
+                  placeholder={t("typeThought")}
                   disabled={sending || meeting.status !== "active"}
-                  className="min-h-[42px] flex-1 resize-none rounded-md border border-border bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50"
+                  className="min-h-[42px] flex-1 resize-none rounded-md border border-border bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-accent/60 focus-visible:ring-1 focus-visible:ring-accent/40 focus-visible:ring-offset-0 disabled:opacity-50"
                 />
                 <Button
                   onClick={() => void onSend()}
