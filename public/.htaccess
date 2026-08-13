@@ -1,6 +1,14 @@
+# Optional: only needed if you use BrowserRouter later.
+# With HashRouter, deep links work without rewrite.
+Options -MultiViews
 RewriteEngine On
-RewriteBase /
-RewriteRule ^index\.html$ - [L]
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /index.html [L]
+
+# If this folder is the document root of a subdomain, use RewriteBase /
+# If deployed under https://domain/meetroom/, use RewriteBase /meetroom/
+RewriteBase /meetroom/
+
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+RewriteRule ^ index.html [L]

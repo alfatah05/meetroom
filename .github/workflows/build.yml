@@ -36,9 +36,9 @@ jobs:
       - name: Typecheck & production build
         run: npm run build
         env:
-          # Project site: https://USER.github.io/REPO/
-          # Sets Vite base so assets + React Router basename match
-          BASE_PATH: /${{ github.event.repository.name }}/
+          # Relative base — works on shared hosting and most static hosts.
+          # For GitHub Pages project site, set BASE_PATH: /${{ github.event.repository.name }}/
+          BASE_PATH: ./
 
       - name: SPA fallback for GitHub Pages (404.html)
         if: matrix.node-version == 22

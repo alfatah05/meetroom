@@ -1,42 +1,60 @@
-# Deploy
+# Deploy ke Shared Hosting (dev.nbil.my.id/meetroom)
 
-## GitHub Pages (recommended)
+## Kenapa blank hitam?
+Browser gagal load CSS/JS (404). Halaman hanya menampilkan background gelap dari HTML inline.
+Penyebab umum: file `index.html` dan folder `assets/` tidak cocok (hash nama file beda), atau ditaruh di path yang salah.
 
-1. Push repo (termasuk `.github/workflows/build.yml`).
-2. **Wajib:** Repo → **Settings** → **Pages** → Source = **GitHub Actions**.
-3. Push ke `main`/`master` (atau re-run workflow di tab Actions).
-4. URL site ada di Settings → Pages setelah deploy sukses.
+## Cara build (di laptop / CI)
 
-Kalau error `Get Pages site failed` / `Not Found` → Pages belum diaktifkan (langkah 2).
-
-### Base path untuk project site
-
-Kalau URL-nya `https://USERNAME.github.io/REPO_NAME/`, set di `vite.config.ts`:
-
-```ts
-base: process.env.GITHUB_PAGES === "true" ? "/REPO_NAME/" : "./",
+```bash
+npm install
+npm run build
 ```
 
-dan di workflow build step tambahkan:
+Hasil ada di folder `dist/`.
 
-```yaml
-env:
-  GITHUB_PAGES: "true"
-```
+Config saat ini:
+- `base: "./"` → asset path relatif (`./assets/...`)
+- HashRouter → URL pakai `#/`, refresh tidak 404
 
-## Shared Hosting (Apache/Nginx)
+## Cara upload (PENTING — jangan timpa setengah-setengah)
 
-1. `npm install`
-2. `npm run build`
-3. Upload **semua isi** folder `dist/` ke public_html (atau document root).
-4. Pastikan file `.htaccess` ada di root upload (dari `public/.htaccess`).
-5. Apache: mod_rewrite harus aktif.
-6. Nginx contoh:
+1. Di server, buka folder yang melayani URL `https://dev.nbil.my.id/meetroom/`
+   (biasanya `public_html/meetroom/` atau sejenisnya).
 
-```
-location / {
-  try_files $uri $uri/ /index.html;
-}
-```
+2. **Hapus SEMUA isi folder itu dulu** (terutama folder `assets/` lama).
+   File CSS/JS Vite punya hash di nama file. Kalau tidak dihapus, file lama + baru campur
+   dan `index.html` bisa menunjuk ke nama yang tidak ada → 404.
 
-Tidak butuh Node.js di server.
+3. Upload **semua isi** folder `dist/` ke folder `meetroom/` itu:
+   ```
+   meetroom/
+     index.html
+     favicon.svg
+     icons.svg
+     .htaccess
+     assets/
+       index-XXXXX.js
+       index-XXXXX.css
+       ...
+   ```
+
+4. Pastikan struktur sama seperti di `dist/` — jangan taruh `dist` sebagai subfolder.
+   Salah: `meetroom/dist/index.html`
+   Benar: `meetroom/index.html`
+
+5. Buka: `https://dev.nbil.my.id/meetroom/` atau `https://dev.nbil.my.id/meetroom/index.html`
+   Route app: `https://dev.nbil.my.id/meetroom/#/settings` dll.
+
+## Cek di browser (F12 → Network)
+
+- `index.html` → 200
+- `assets/index-....js` → 200
+- `assets/index-....css` → 200
+
+Kalau masih 404, lihat path request vs path file di File Manager hosting.
+
+## Jangan pakai artifact GitHub Pages mentah
+
+Build GitHub Actions set `BASE_PATH=/nama-repo/` untuk GitHub Pages.
+Untuk shared hosting, build lokal dengan `npm run build` (base `./`).
