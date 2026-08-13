@@ -1,20 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useProjectStore } from "@/stores/project-store";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProjectCard } from "@/components/project/ProjectCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Upload } from "lucide-react";
-import { useRef } from "react";
 import { importProject } from "@/lib/export-import";
 import { useNavigate } from "react-router-dom";
+import { useLocaleStore } from "@/stores/locale-store";
 
 export function DashboardPage() {
   const { projects, isLoading, isHydrated, hydrate } = useProjectStore();
   const [query, setQuery] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  
+  const t = useLocaleStore((s) => s.t);
+
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
@@ -35,13 +36,11 @@ export function DashboardPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              Your Projects
+              {t("yourProjects")}
             </h1>
-            <p className="mt-1 text-sm text-muted">
-              Build a team. Challenge ideas. Make better decisions.
-            </p>
+            <p className="mt-1 text-sm text-muted">{t("tagline")}</p>
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex shrink-0 gap-2">
             <input
               ref={fileRef}
               type="file"
@@ -60,26 +59,22 @@ export function DashboardPage() {
                 e.target.value = "";
               }}
             />
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => fileRef.current?.click()}
-            >
+            <Button variant="outline" size="md" onClick={() => fileRef.current?.click()}>
               <Upload className="h-4 w-4" />
-              Import
+              {t("import")}
             </Button>
             <Button to="/project/new" size="md">
               <Plus className="h-4 w-4" />
-              New Project
+              {t("newProject")}
             </Button>
           </div>
         </div>
 
         {projects.length > 3 && (
           <div className="relative mt-6 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted" />
             <Input
-              placeholder="Search projects..."
+              placeholder={t("searchProjects")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="pl-9"
@@ -91,7 +86,10 @@ export function DashboardPage() {
           {!isHydrated || isLoading ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-40 animate-pulse rounded-lg border border-border bg-card" />
+                <div
+                  key={i}
+                  className="h-40 animate-pulse rounded-md border border-border bg-card"
+                />
               ))}
             </div>
           ) : filtered.length === 0 ? (
@@ -110,22 +108,21 @@ export function DashboardPage() {
 }
 
 function EmptyState({ hasQuery }: { hasQuery: boolean }) {
+  const t = useLocaleStore((s) => s.t);
   if (hasQuery) {
     return (
-      <div className="rounded-lg border border-dashed border-border bg-card/50 py-16 text-center">
-        <p className="text-muted">No projects match your search.</p>
+      <div className="rounded-md border border-dashed border-border bg-card/50 py-16 text-center">
+        <p className="text-muted">{t("noMatch")}</p>
       </div>
     );
   }
   return (
-    <div className="rounded-lg border border-dashed border-border bg-card/50 px-6 py-16 text-center">
-      <p className="text-lg font-medium text-foreground">Your next idea starts here.</p>
-      <p className="mt-2 text-sm text-muted max-w-sm mx-auto">
-        Create a project, hire specialized perspectives, and hold structured meetings to think clearer.
-      </p>
+    <div className="rounded-md border border-dashed border-border bg-card/50 px-6 py-16 text-center">
+      <p className="text-lg font-medium text-foreground">{t("emptyTitle")}</p>
+      <p className="mx-auto mt-2 max-w-sm text-sm text-muted">{t("emptyBody")}</p>
       <Button to="/project/new" className="mt-6">
         <Plus className="h-4 w-4" />
-        Create your first project
+        {t("createFirst")}
       </Button>
     </div>
   );

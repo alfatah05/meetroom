@@ -2,39 +2,50 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { Opinion, Stance } from "@/types";
 import { PERSONA_LIBRARY } from "@/data/personas";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Check,
+  TriangleAlert,
+  X,
+  HelpCircle,
+  Info,
+} from "lucide-react";
+import { PersonaAvatar } from "@/components/persona/PersonaAvatar";
+import { useLocaleStore } from "@/stores/locale-store";
+import type { TranslationKey } from "@/i18n/translations";
 
 const STANCE_META: Record<
   Stance,
-  { label: string; icon: string; className: string; bg: string }
+  { labelKey: TranslationKey; Icon: typeof Check; className: string; bg: string }
 > = {
   support: {
-    label: "SUPPORT",
-    icon: "✓",
+    labelKey: "support",
+    Icon: Check,
     className: "text-support",
     bg: "bg-support-bg",
   },
   concern: {
-    label: "CONCERN",
-    icon: "△",
+    labelKey: "concern",
+    Icon: TriangleAlert,
     className: "text-concern",
     bg: "bg-concern-bg",
   },
   oppose: {
-    label: "OPPOSE",
-    icon: "✕",
+    labelKey: "oppose",
+    Icon: X,
     className: "text-oppose",
     bg: "bg-oppose-bg",
   },
   uncertain: {
-    label: "UNCERTAIN",
-    icon: "?",
+    labelKey: "uncertain",
+    Icon: HelpCircle,
     className: "text-uncertain",
     bg: "bg-card-hover",
   },
   information: {
-    label: "INFO",
-    icon: "i",
+    labelKey: "info",
+    Icon: Info,
     className: "text-info",
     bg: "bg-accent-muted",
   },
@@ -44,52 +55,52 @@ export function OpinionCard({ opinion }: { opinion: Opinion }) {
   const [open, setOpen] = useState(false);
   const persona = PERSONA_LIBRARY.find((p) => p.id === opinion.personaId);
   const meta = STANCE_META[opinion.stance];
+  const t = useLocaleStore((s) => s.t);
+  const Icon = meta.Icon;
 
   return (
-    <article className="rounded-lg border border-border bg-card p-4">
+    <article className="rounded-md border border-border bg-card p-4">
       <div className="flex items-start gap-3">
-        <span className="text-xl shrink-0" aria-hidden>
-          {persona?.avatar ?? "👤"}
-        </span>
+        <PersonaAvatar avatar={persona?.avatar} size="sm" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-foreground">{persona?.name ?? "Persona"}</span>
             <span className="text-xs text-muted">{persona?.role}</span>
             <span
               className={cn(
-                "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide",
+                "inline-flex items-center gap-1 rounded-full border border-transparent px-1.5 py-0.5 text-[10px] font-semibold tracking-wide",
                 meta.bg,
                 meta.className
               )}
             >
-              <span aria-hidden>{meta.icon}</span>
-              {meta.label}
+              <Icon className="h-3 w-3" strokeWidth={2.5} />
+              {t(meta.labelKey)}
             </span>
           </div>
-          <p className="mt-2 text-sm text-foreground leading-relaxed">{opinion.mainPoint}</p>
+          <p className="mt-2 text-sm leading-relaxed text-foreground">{opinion.mainPoint}</p>
           {opinion.recommendation && (
             <p className="mt-2 text-xs text-muted">
-              <span className="font-medium text-foreground/80">Recommendation: </span>
+              <span className="font-medium text-foreground/80">{t("recommendation")}: </span>
               {opinion.recommendation}
             </p>
           )}
           <button
             type="button"
             onClick={() => setOpen(!open)}
-            className="mt-2 inline-flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors"
+            className="mt-2 inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-foreground"
           >
             {open ? (
               <>
-                Hide reasoning <ChevronUp className="h-3 w-3" />
+                {t("hideReasoning")} <ChevronUp className="h-3 w-3" />
               </>
             ) : (
               <>
-                View reasoning <ChevronDown className="h-3 w-3" />
+                {t("viewReasoning")} <ChevronDown className="h-3 w-3" />
               </>
             )}
           </button>
           {open && (
-            <div className="mt-2 rounded-md bg-card-hover/80 p-3 text-sm text-foreground/90 leading-relaxed">
+            <div className="mt-2 rounded-md border border-border bg-background p-3 text-sm leading-relaxed text-foreground/90">
               {opinion.reasoning}
               {opinion.concerns && opinion.concerns.length > 0 && (
                 <ul className="mt-2 list-disc pl-4 text-xs text-concern">
@@ -100,7 +111,7 @@ export function OpinionCard({ opinion }: { opinion: Opinion }) {
               )}
               {typeof opinion.confidence === "number" && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Confidence {Math.round(opinion.confidence * 100)}%
+                  {t("confidence")} {Math.round(opinion.confidence * 100)}%
                 </p>
               )}
             </div>

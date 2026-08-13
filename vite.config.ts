@@ -3,6 +3,10 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
+// GitHub Pages project site: base = /REPO_NAME/
+// Local / shared hosting: base = ./
+const base = process.env.BASE_PATH || "./";
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -10,5 +14,5 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  base: "./",
+  base,
 });

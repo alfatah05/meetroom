@@ -2,6 +2,8 @@ import { cn } from "@/lib/utils";
 import type { Persona } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Check, Plus, Eye } from "lucide-react";
+import { PersonaAvatar } from "./PersonaAvatar";
+import { useLocaleStore } from "@/stores/locale-store";
 
 interface PersonaCardProps {
   persona: Persona;
@@ -20,24 +22,24 @@ export function PersonaCard({
   onView,
   compact = false,
 }: PersonaCardProps) {
+  const t = useLocaleStore((s) => s.t);
+
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-card p-4 transition-all",
-        hired && "border-accent/50 bg-accent-muted/30",
-        !compact && "hover:shadow-sm"
+        "rounded-md border border-border bg-card p-4 transition-colors",
+        hired && "border-accent/40 bg-accent-muted/40",
+        !compact && "hover:bg-card-hover"
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card-hover text-xl">
-          {persona.avatar || "👤"}
-        </div>
+        <PersonaAvatar avatar={persona.avatar} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-foreground">{persona.name}</h3>
             {persona.isSpecial && (
-              <span className="rounded bg-concern-bg px-1.5 py-0.5 text-[10px] font-medium text-concern">
-                Special
+              <span className="rounded-full border border-concern/40 bg-concern-bg px-1.5 py-0.5 text-[10px] font-medium text-concern">
+                {t("special")}
               </span>
             )}
           </div>
@@ -53,16 +55,16 @@ export function PersonaCard({
           <p className="mt-3 text-sm text-foreground/90 line-clamp-2">{persona.description}</p>
           <div className="mt-3 space-y-2 text-xs">
             <div>
-              <span className="font-medium text-muted">Focus</span>
-              <p className="text-foreground/80 mt-0.5">{persona.expertise.slice(0, 3).join(" · ")}</p>
+              <span className="font-medium text-muted">{t("focus")}</span>
+              <p className="mt-0.5 text-foreground/80">{persona.expertise.slice(0, 3).join(" · ")}</p>
             </div>
             <div>
-              <span className="font-medium text-muted">Thinking</span>
-              <p className="text-foreground/80 mt-0.5">{persona.thinkingStyle.join(" · ")}</p>
+              <span className="font-medium text-muted">{t("thinking")}</span>
+              <p className="mt-0.5 text-foreground/80">{persona.thinkingStyle.join(" · ")}</p>
             </div>
             <div>
-              <span className="font-medium text-muted">Objective</span>
-              <p className="text-foreground/80 mt-0.5 line-clamp-2">{persona.objective}</p>
+              <span className="font-medium text-muted">{t("objective")}</span>
+              <p className="mt-0.5 line-clamp-2 text-foreground/80">{persona.objective}</p>
             </div>
           </div>
         </>
@@ -72,19 +74,19 @@ export function PersonaCard({
         {onView && (
           <Button variant="ghost" size="sm" onClick={onView}>
             <Eye className="h-3.5 w-3.5" />
-            View
+            {t("view")}
           </Button>
         )}
         {hired ? (
           <Button variant="outline" size="sm" onClick={onRemove}>
             <Check className="h-3.5 w-3.5 text-support" />
-            Hired
+            {t("hired")}
           </Button>
         ) : (
           onHire && (
             <Button variant="primary" size="sm" onClick={onHire}>
               <Plus className="h-3.5 w-3.5" />
-              Hire
+              {t("hire")}
             </Button>
           )
         )}

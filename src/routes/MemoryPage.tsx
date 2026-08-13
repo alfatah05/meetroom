@@ -7,7 +7,7 @@ import { DecisionCard } from "@/components/meeting/DecisionCard";
 import { useProjectStore } from "@/stores/project-store";
 import { useMemoryStore } from "@/stores/memory-store";
 import { useDecisionStore } from "@/stores/decision-store";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, Plus, X, Check, ArrowRight } from "lucide-react";
 import type { ProjectMemory } from "@/types";
 
 type ListField = keyof Omit<ProjectMemory, "projectId" | "decisions" | "actionItems">;
@@ -169,8 +169,9 @@ export function MemoryPage() {
             <ul className="mt-2 space-y-1.5">
               {memory.actionItems.map((a) => (
                 <li key={a.id} className="text-sm">
-                  <span className={a.status === "done" ? "text-muted line-through" : ""}>
-                    {a.status === "done" ? "✓" : "→"} {a.title}
+                  <span className={`inline-flex items-center gap-1.5 ${a.status === "done" ? "text-muted line-through" : ""}`}>
+                    {a.status === "done" ? <Check className="h-3.5 w-3.5 text-support" /> : <ArrowRight className="h-3.5 w-3.5 text-muted" />}
+                    {a.title}
                   </span>
                 </li>
               ))}

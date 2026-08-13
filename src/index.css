@@ -1,26 +1,29 @@
 @import "tailwindcss";
 
+/* GitHub-inspired dark theme only — primary = sky blue */
 :root {
-  --background: #fafaf9;
-  --foreground: #1c1917;
-  --muted: #78716c;
-  --muted-foreground: #a8a29e;
-  --border: #e7e5e4;
-  --card: #ffffff;
-  --card-hover: #f5f5f4;
-  --accent: #6c63ff;
-  --accent-hover: #5b52e0;
-  --accent-muted: #eeedff;
-  --accent-foreground: #ffffff;
-  --support: #16a34a;
-  --support-bg: #f0fdf4;
-  --concern: #d97706;
-  --concern-bg: #fffbeb;
-  --oppose: #dc2626;
-  --oppose-bg: #fef2f2;
-  --uncertain: #64748b;
-  --info: #2563eb;
-  --radius: 0.5rem;
+  color-scheme: dark;
+
+  --background: #0d1117;
+  --foreground: #e6edf3;
+  --muted: #8b949e;
+  --muted-foreground: #6e7681;
+  --border: #30363d;
+  --card: #161b22;
+  --card-hover: #1c2128;
+  --accent: #38bdf8;
+  --accent-hover: #0ea5e9;
+  --accent-muted: rgba(56, 189, 248, 0.12);
+  --accent-foreground: #0d1117;
+  --support: #3fb950;
+  --support-bg: rgba(63, 185, 80, 0.12);
+  --concern: #d29922;
+  --concern-bg: rgba(210, 153, 34, 0.12);
+  --oppose: #f85149;
+  --oppose-bg: rgba(248, 81, 73, 0.12);
+  --uncertain: #8b949e;
+  --info: #58a6ff;
+  --radius: 0.375rem;
 }
 
 @theme inline {
@@ -43,7 +46,7 @@
   --color-oppose-bg: var(--oppose-bg);
   --color-uncertain: var(--uncertain);
   --color-info: var(--info);
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 2px);
@@ -53,12 +56,19 @@
   border-color: var(--border);
 }
 
+html {
+  background: var(--background);
+  color: var(--foreground);
+}
+
 body {
   margin: 0;
   min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -67,6 +77,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--background);
 }
 
 :focus-visible {
@@ -85,16 +96,20 @@ body {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
+  background: #484f58;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
+  background: #6e7681;
+}
+
+::selection {
+  background: rgba(56, 189, 248, 0.3);
 }

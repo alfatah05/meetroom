@@ -10,19 +10,29 @@ import { DecisionHistoryPage } from "@/routes/DecisionHistoryPage";
 import { MemoryPage } from "@/routes/MemoryPage";
 import { SettingsPage } from "@/routes/SettingsPage";
 import { useProviderStore } from "@/stores/provider-store";
+import { useLocaleStore } from "@/stores/locale-store";
 
-function ProviderBootstrap({ children }: { children: React.ReactNode }) {
-  const hydrate = useProviderStore((s) => s.hydrate);
+function Bootstrap({ children }: { children: React.ReactNode }) {
+  const hydrateProvider = useProviderStore((s) => s.hydrate);
+  const hydrateLocale = useLocaleStore((s) => s.hydrate);
+
   useEffect(() => {
-    void hydrate();
-  }, [hydrate]);
+    void hydrateProvider();
+    hydrateLocale();
+  }, [hydrateProvider, hydrateLocale]);
+
   return <>{children}</>;
 }
 
+// Vite sets import.meta.env.BASE_URL from `base` in vite.config
+// e.g. "/meetroom_app/" on GitHub Pages
+const rawBase = import.meta.env.BASE_URL || "/";
+const basename = rawBase === "./" || rawBase === "/" ? undefined : rawBase.replace(/\/$/, "");
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <ProviderBootstrap>
+    <BrowserRouter basename={basename}>
+      <Bootstrap>
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/projects" element={<DashboardPage />} />
@@ -36,7 +46,7 @@ export default function App() {
           <Route path="/project/:id/memory" element={<MemoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
-      </ProviderBootstrap>
+      </Bootstrap>
     </BrowserRouter>
   );
 }

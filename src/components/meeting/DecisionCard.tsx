@@ -1,7 +1,8 @@
 import { useState } from "react";
 import type { Decision } from "@/types";
 import { formatRelativeTime } from "@/lib/utils";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { useLocaleStore } from "@/stores/locale-store";
 
 export function DecisionCard({
   decision,
@@ -11,15 +12,19 @@ export function DecisionCard({
   onRemove?: () => void;
 }) {
   const [whyOpen, setWhyOpen] = useState(false);
+  const t = useLocaleStore((s) => s.t);
 
   return (
-    <article className="rounded-lg border border-border bg-card p-4 transition-colors hover:bg-card-hover/50">
+    <article className="rounded-md border border-border bg-card p-4 transition-colors hover:bg-card-hover/50">
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 text-support font-semibold" aria-hidden>
-          ✓
+        <span
+          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-support-bg text-support"
+          aria-hidden
+        >
+          <Check className="h-3 w-3" strokeWidth={2.5} />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="font-medium text-foreground leading-snug">{decision.title}</h3>
+          <h3 className="font-medium leading-snug text-foreground">{decision.title}</h3>
           {decision.reason && (
             <p className="mt-1 text-sm text-muted">{decision.reason}</p>
           )}
@@ -29,7 +34,7 @@ export function DecisionCard({
             {decision.relatedTopicTitle && (
               <>
                 <span className="text-border">·</span>
-                <span className="truncate max-w-[200px]">{decision.relatedTopicTitle}</span>
+                <span className="max-w-[200px] truncate">{decision.relatedTopicTitle}</span>
               </>
             )}
             <span className="text-border">·</span>
@@ -38,7 +43,7 @@ export function DecisionCard({
               <>
                 <span className="text-border">·</span>
                 <span>
-                  Consensus {decision.consensus}/{decision.consensusTotal}
+                  {t("consensus")} {decision.consensus}/{decision.consensusTotal}
                 </span>
               </>
             )}
@@ -55,9 +60,9 @@ export function DecisionCard({
               <button
                 type="button"
                 onClick={() => setWhyOpen(!whyOpen)}
-                className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground hover:bg-card-hover transition-colors"
+                className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card-hover"
               >
-                Why?
+                {t("why")}
                 {whyOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </button>
             )}
@@ -65,28 +70,28 @@ export function DecisionCard({
               <button
                 type="button"
                 onClick={onRemove}
-                className="text-xs text-muted hover:text-oppose transition-colors"
+                className="text-xs text-muted transition-colors hover:text-oppose"
               >
-                Remove
+                {t("remove")}
               </button>
             )}
           </div>
 
           {whyOpen && (
-            <div className="mt-3 rounded-md border border-border bg-background p-3 space-y-2">
+            <div className="mt-3 space-y-2 rounded-md border border-border bg-background p-3">
               {decision.whyBreakdown && decision.whyBreakdown.length > 0 ? (
                 decision.whyBreakdown.map((w, i) => (
                   <div key={i} className="text-sm">
                     <span className="font-medium text-foreground">{w.personaName}</span>
-                    <p className="text-muted mt-0.5">{w.point}</p>
+                    <p className="mt-0.5 text-muted">{w.point}</p>
                   </div>
                 ))
               ) : (
                 <p className="text-sm text-muted">{decision.reason}</p>
               )}
               {typeof decision.consensus === "number" && decision.consensusTotal && (
-                <p className="pt-2 text-xs text-muted-foreground border-t border-border">
-                  Consensus: {decision.consensus} / {decision.consensusTotal}
+                <p className="border-t border-border pt-2 text-xs text-muted-foreground">
+                  {t("consensus")}: {decision.consensus} / {decision.consensusTotal}
                 </p>
               )}
             </div>
