@@ -11,7 +11,13 @@ import type {
 } from "@/types";
 import { PERSONA_LIBRARY } from "@/data/personas";
 import { providerManager } from "@/providers/provider-manager";
-import { selectParticipants } from "@/features/meetings/moderator";
+import {
+  selectParticipants,
+  moderatorOpening,
+  buildMeetingBreakdown,
+  suggestNextTopics,
+  MODERATOR_ID,
+} from "@/features/meetings/moderator";
 import { useProjectStore } from "./project-store";
 import { useDecisionStore } from "./decision-store";
 import { useMemoryStore } from "./memory-store";
@@ -179,33 +185,49 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
   endMeeting: () => {
     const m = get().meeting;
     if (!m) return;
-    const ended = { ...m, status: "ended" as const, endedAt: new Date().toISOString() };
-    set({ meeting: ended, pendingProposals: [] });
-    void storage.saveMeeting(ended);
-    void storage.setSetting(`meeting-session:${m.projectId}`, null);
-    const proj = useProjectStore.getState().projects.find((p) => p.id === m.projectId);
-    if (proj) {
-      void useProjectStore.getState().updateProject(m.projectId, {
-        meetingCount: (proj.meetingCount ?? 0) + 1,
+    void (async () => {
+      const localeMod = await import("@/stores/locale-store");
+      const locale = localeMod.useLocaleStore.getState().locale;
+      const breakdown = buildMeetingBreakdown({
+        meetingId: m.id,
+        meetingTitle: m.title,
+        projectId: m.projectId,
+        topics: get().topics,
+        opinions: get().opinions,
+        decisions: get().decisions,
+        openQuestions: get().openQuestions,
+        locale,
       });
-    }
-    // Persist meeting outcomes into project memory
-    const topics = get().topics;
-    const summary =
-      topics.length > 0
-        ? `Meeting "${m.title}" covered: ${topics.map((t) => t.title).join("; ")}`
-        : `Meeting "${m.title}" ended`;
-    const concernPoints = get()
-      .opinions.filter((o) => o.stance === "concern" || o.stance === "oppose")
-      .map((o) => o.mainPoint)
-      .slice(0, 5);
-    void useMemoryStore.getState().syncFromMeeting({
-      projectId: m.projectId,
-      decisions: get().decisions,
-      openQuestions: get().openQuestions,
-      risks: concernPoints,
-      summary,
-    });
+      const ended = {
+        ...m,
+        status: "ended" as const,
+        endedAt: breakdown.endedAt,
+        breakdown,
+      };
+      set({ meeting: ended, pendingProposals: [], replyTarget: null });
+      void storage.saveMeeting(ended);
+      void storage.setSetting(`meeting-session:${m.projectId}`, null);
+      // Keep list of breakdowns for project page
+      const prev =
+        (await storage.getSetting<typeof breakdown[]>(`meeting-breakdowns:${m.projectId}`)) ?? [];
+      await storage.setSetting(`meeting-breakdowns:${m.projectId}`, [breakdown, ...prev].slice(0, 20));
+
+      const proj = useProjectStore.getState().projects.find((p) => p.id === m.projectId);
+      if (proj) {
+        void useProjectStore.getState().updateProject(m.projectId, {
+          meetingCount: (proj.meetingCount ?? 0) + 1,
+        });
+      }
+      void useMemoryStore.getState().syncFromMeeting({
+        projectId: m.projectId,
+        decisions: get().decisions,
+        openQuestions: get().openQuestions,
+        risks: breakdown.risks,
+        facts: breakdown.keyPoints.slice(0, 8),
+        summary: breakdown.narrative,
+        meetingNote: breakdown.narrative,
+      });
+    })();
   },
 
   setViewMode: (mode) => set({ viewMode: mode }),
@@ -289,9 +311,15 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     const project = useProjectStore.getState().projects.find((p) => p.id === m.projectId);
     if (!project) return;
 
+    // Always use latest hires (agents added mid-meeting can join immediately)
     const hired = project.personaIds
       .map((id) => PERSONA_LIBRARY.find((p) => p.id === id))
       .filter(Boolean) as Persona[];
+    if (m.participantIds.join() !== project.personaIds.join()) {
+      set((s) => ({
+        meeting: s.meeting ? { ...s.meeting, participantIds: [...project.personaIds] } : s.meeting,
+      }));
+    }
 
     if (hired.length === 0) {
       set({ error: "Hire at least one persona before starting a discussion." });
@@ -346,6 +374,30 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     } else {
       participants = selectParticipants(hired, trimmed, m.mode);
     }
+
+    // Moderator announces who will speak (non-reply only)
+    if (!replyTarget && participants.length > 0) {
+      const localeModEarly = await import("@/stores/locale-store");
+      const locEarly = localeModEarly.useLocaleStore.getState().locale;
+      const opening = moderatorOpening(trimmed, participants, locEarly);
+      const modOp: Opinion = {
+        id: uuid(),
+        topicId: topic!.id,
+        meetingId: m.id,
+        personaId: MODERATOR_ID,
+        stance: "information",
+        mainPoint: opening,
+        reasoning: participants.map((p) => p.role).join(", "),
+        createdAt: new Date().toISOString(),
+      };
+      set((s) => ({
+        opinions: [...s.opinions, modOp],
+        meeting: s.meeting
+          ? { ...s.meeting, contributionCount: s.meeting.contributionCount + 1 }
+          : s.meeting,
+      }));
+    }
+
     // Ensure memory loaded for context retrieval
     const memStore = useMemoryStore.getState();
     if (!memStore.byProject[m.projectId]) {
@@ -386,6 +438,21 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     ]
       .filter(Boolean)
       .join("\n");
+
+    // Carry forward unresolved items from last meeting
+    try {
+      const prevBd =
+        (await storage.getSetting<{ unresolved?: string[] }[]>(`meeting-breakdowns:${m.projectId}`)) ??
+        [];
+      const prevUnresolved = prevBd[0]?.unresolved ?? [];
+      if (prevUnresolved.length) {
+        projectContext +=
+          "\n\n## PREVIOUSLY UNRESOLVED (from last meeting — prioritize if relevant)\n" +
+          prevUnresolved.map((u, i) => `${i + 1}. ${u}`).join("\n");
+      }
+    } catch {
+      /* ignore */
+    }
 
     if (parentOpinion) {
       const parentPersona = PERSONA_LIBRARY.find((x) => x.id === parentOpinion.personaId);
@@ -524,6 +591,32 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
         console.error(e);
         set({ error: loc.t("aiUnavailable") });
       }
+    }
+
+    // Moderator suggests next topics (non-reply rounds only)
+    if (!replyTarget && participants.length > 0) {
+      let unresolved: string[] = [];
+      try {
+        const prev =
+          (await storage.getSetting<{ unresolved?: string[]; narrative?: string }[]>(
+            `meeting-breakdowns:${m.projectId}`
+          )) ?? [];
+        unresolved = prev[0]?.unresolved ?? [];
+      } catch {
+        /* ignore */
+      }
+      const suggestion = suggestNextTopics(trimmed, participants, loc.locale, unresolved);
+      const modNext: Opinion = {
+        id: uuid(),
+        topicId: topic!.id,
+        meetingId: m.id,
+        personaId: MODERATOR_ID,
+        stance: "information",
+        mainPoint: suggestion,
+        reasoning: "next-topic-suggestion",
+        createdAt: new Date().toISOString(),
+      };
+      set((s) => ({ opinions: [...s.opinions, modNext] }));
     }
 
     set({ thinking: [], replyTarget: null });

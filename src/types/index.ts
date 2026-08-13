@@ -80,6 +80,23 @@ export interface ProjectMemory {
   risks: string[];
   actionItems: ActionItem[];
   importantFacts: string[];
+  /** Moderator end-of-meeting narratives */
+  meetingNotes?: string[];
+}
+
+export interface MeetingBreakdown {
+  meetingId: string;
+  meetingTitle: string;
+  projectId: string;
+  endedAt: string;
+  topics: { title: string; opinionCount: number; stanceSummary?: string }[];
+  decisions: { title: string; reason: string }[];
+  openQuestions: string[];
+  keyPoints: string[];
+  risks: string[];
+  /** Topics / questions still open for a future meeting */
+  unresolved?: string[];
+  narrative: string;
 }
 
 export interface DecisionWhyEntry {
@@ -125,6 +142,8 @@ export interface Meeting {
   startedAt: string;
   endedAt?: string;
   contributionCount: number;
+  /** Filled by moderator when meeting ends */
+  breakdown?: MeetingBreakdown;
 }
 
 export interface Topic {

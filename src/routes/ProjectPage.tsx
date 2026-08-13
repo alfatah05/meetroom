@@ -12,6 +12,9 @@ import { PersonaAvatar } from "@/components/persona/PersonaAvatar";
 import { useLocaleStore } from "@/stores/locale-store";
 import { useMeetingStore } from "@/stores/meeting-store";
 import { exportProject, downloadExport } from "@/lib/export-import";
+import * as storage from "@/storage/indexeddb";
+import type { MeetingBreakdown } from "@/types";
+import { Markdown } from "@/components/ui/markdown";
 
 export function ProjectPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,10 +37,14 @@ export function ProjectPage() {
   const t = useLocaleStore((s) => s.t);
   const resumeMeeting = useMeetingStore((s) => s.resumeMeeting);
   const [hasActiveMeeting, setHasActiveMeeting] = useState(false);
+  const [breakdowns, setBreakdowns] = useState<MeetingBreakdown[]>([]);
 
   useEffect(() => {
     if (!id) return;
     void resumeMeeting(id).then((ok) => setHasActiveMeeting(ok));
+    void storage.getSetting<MeetingBreakdown[]>(`meeting-breakdowns:${id}`).then((list) => {
+      setBreakdowns(list ?? []);
+    });
   }, [id, resumeMeeting]);
 
   async function onExport() {
@@ -184,6 +191,35 @@ export function ProjectPage() {
                   )
               )}
             </ul>
+          )}
+        </section>
+
+        <section className="mt-10">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-muted">
+            {t("meetingBreakdown")}
+          </h2>
+          {breakdowns.length === 0 ? (
+            <div className="mt-3 rounded-md border border-dashed border-border bg-card/50 px-6 py-8 text-center">
+              <p className="text-sm text-muted">{t("noBreakdownYet")}</p>
+            </div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              {breakdowns.slice(0, 3).map((b) => (
+                <article
+                  key={b.meetingId + b.endedAt}
+                  className="rounded-md border border-border bg-card p-4"
+                >
+                  <h3 className="font-medium text-foreground">{b.meetingTitle}</h3>
+                  <p className="mt-1 text-xs text-muted">
+                    {new Date(b.endedAt).toLocaleString()} · {b.decisions.length}{" "}
+                    {t("decisions").toLowerCase()}
+                  </p>
+                  <div className="mt-3 max-h-72 overflow-y-auto rounded-md border border-border bg-background p-3">
+                    <Markdown content={b.narrative} className="text-xs sm:text-sm" />
+                  </div>
+                </article>
+              ))}
+            </div>
           )}
         </section>
 

@@ -16,6 +16,7 @@ function emptyMemory(projectId: string): ProjectMemory {
     risks: [],
     actionItems: [],
     importantFacts: [],
+    meetingNotes: [],
   };
 }
 
@@ -43,6 +44,7 @@ interface MemoryState {
     risks?: string[];
     facts?: string[];
     summary?: string;
+    meetingNote?: string;
   }) => Promise<void>;
   /** Compact context string for AI prompts */
   getContextSnippet: (projectId: string, maxItems?: number) => string;
@@ -104,7 +106,7 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
     await get().save(updated);
   },
 
-  syncFromMeeting: async ({ projectId, decisions, openQuestions, risks, facts, summary }) => {
+  syncFromMeeting: async ({ projectId, decisions, openQuestions, risks, facts, summary, meetingNote }) => {
     const current = get().byProject[projectId] ?? emptyMemory(projectId);
     const existingQ = new Set(current.openQuestions);
     const existingRisks = new Set(current.risks);
@@ -126,6 +128,11 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
       mergedFacts.push(summary);
     }
 
+    const notes = [...(current.meetingNotes ?? [])];
+    if (meetingNote && !notes.includes(meetingNote)) {
+      notes.unshift(meetingNote);
+    }
+
     // Prefer latest decision list from meeting merge + existing unique by id
     const byId = new Map<string, Decision>();
     for (const d of current.decisions) byId.set(d.id, d);
@@ -138,7 +145,8 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
       ),
       openQuestions: mergedQuestions,
       risks: mergedRisks,
-      importantFacts: mergedFacts.slice(-40), // keep bounded
+      importantFacts: mergedFacts.slice(-40),
+      meetingNotes: notes.slice(0, 30),
     };
     await get().save(updated);
   },
@@ -165,6 +173,8 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
       lines.push("Rejected: " + m.rejectedIdeas.slice(0, maxItems).join("; "));
     if (m.importantFacts.length)
       lines.push("Facts: " + m.importantFacts.slice(0, maxItems).join("; "));
+    if (m.meetingNotes?.length)
+      lines.push("Last meeting note: " + m.meetingNotes[0].slice(0, 400));
     return lines.length > 1 ? lines.join("\n") : "";
   },
 }));

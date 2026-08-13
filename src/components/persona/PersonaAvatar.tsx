@@ -8,6 +8,8 @@ import {
   BarChart3,
   Cog,
   User,
+  LayoutTemplate,
+  Type,
   type LucideIcon,
 } from "lucide-react";
 import * as LucideAll from "lucide-react";
@@ -30,6 +32,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   chart: BarChart3,
   cog: Cog,
   user: User,
+  layout: LayoutTemplate,
+  type: Type,
 };
 
 const LEGACY: Record<string, string> = {

@@ -184,6 +184,9 @@ export const translations = {
     replyingTo: "Replying to",
     you: "You",
     appliedDecision: "Applied as decision",
+    moderator: "Moderator",
+    meetingBreakdown: "Meeting breakdown",
+    noBreakdownYet: "No meeting summaries yet. End a meeting to generate one.",
   },
   id: {
     appName: "Council",
@@ -368,6 +371,9 @@ export const translations = {
     replyingTo: "Membalas",
     you: "Anda",
     appliedDecision: "Diterapkan sebagai keputusan",
+    moderator: "Moderator",
+    meetingBreakdown: "Ringkasan rapat",
+    noBreakdownYet: "Belum ada ringkasan. Akhiri rapat untuk membuatnya.",
   },
 } as const;
 

@@ -17,6 +17,8 @@ import * as LucideAll from "lucide-react";
 import { PersonaAvatar } from "@/components/persona/PersonaAvatar";
 import { useLocaleStore } from "@/stores/locale-store";
 import { useMeetingStore } from "@/stores/meeting-store";
+import { MODERATOR_ID } from "@/features/meetings/moderator";
+import { Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TranslationKey } from "@/i18n/translations";
 import type { LucideIcon } from "lucide-react";
@@ -73,7 +75,8 @@ export function OpinionCard({
   const [open, setOpen] = useState(false);
   const [applied, setApplied] = useState(false);
   const isUser = opinion.personaId === "__user__";
-  const persona = isUser ? null : PERSONA_LIBRARY.find((p) => p.id === opinion.personaId);
+  const isModerator = opinion.personaId === MODERATOR_ID;
+  const persona = isUser || isModerator ? null : PERSONA_LIBRARY.find((p) => p.id === opinion.personaId);
   const meta = STANCE_META[opinion.stance];
   const t = useLocaleStore((s) => s.t);
   const Icon = meta.Icon;
@@ -98,6 +101,19 @@ export function OpinionCard({
     );
   }
 
+  if (isModerator) {
+    return (
+      <div className="rounded-md border border-accent/25 bg-accent-muted/15 px-4 py-3">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-accent">
+          <Scale className="h-3.5 w-3.5" />
+          {t("moderator")}
+        </div>
+        <p className="mt-1.5 text-sm leading-relaxed text-foreground/90">{opinion.mainPoint}</p>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <article
       className={cn(
@@ -111,7 +127,11 @@ export function OpinionCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-foreground">{persona?.name ?? "Persona"}</span>
-            <span className="text-xs text-muted">{persona?.role}</span>
+            {persona?.role && (
+              <span className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-muted">
+                {persona.role}
+              </span>
+            )}
             <span
               className={cn(
                 "inline-flex items-center gap-1 rounded-full border border-transparent px-1.5 py-0.5 text-[10px] font-semibold tracking-wide",
