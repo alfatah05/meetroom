@@ -142,13 +142,12 @@ export function moderatorOpening(
   participants: Persona[],
   locale: "en" | "id" = "en"
 ): string {
-  const names = participants.map((p) => `${p.name} (${p.role})`).join(
-    locale === "id" ? "; " : "; "
-  );
+  const names = participants.map((p) => `${p.name} (${p.role})`).join("; ");
+  const shortTopic = topic.length > 80 ? topic.slice(0, 77) + "…" : topic;
   if (locale === "id") {
-    return `Moderator: Topik ini paling relevan untuk: ${names}. Mereka akan memberi perspektif sesuai ranahnya — agen di luar topik tidak dipanggil agar tidak mengulang poin yang sama.`;
+    return `Moderator: Untuk topik "${shortTopic}", yang paling relevan: ${names}. Mereka akan memberi perspektif sesuai ranahnya — agen di luar topik tidak dipanggil agar tidak mengulang poin yang sama.`;
   }
-  return `Moderator: This topic is best handled by: ${names}. They will speak from their domain — others are skipped to avoid overlapping answers.`;
+  return `Moderator: For "${shortTopic}", best handled by: ${names}. They will speak from their domain — others are skipped to avoid overlapping answers.`;
 }
 
 
