@@ -122,7 +122,7 @@ export function MeetingRoomPage() {
             className="mt-2 w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="{t("meetingTitlePlaceholder")}"
+            placeholder={t("meetingTitlePlaceholder")}
           />
           <div className="mt-4 flex flex-wrap gap-2">
             {hired.map(
