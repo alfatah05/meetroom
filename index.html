@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
@@ -15,12 +15,28 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
-      html, body { background: #0d1117; color: #e6edf3; margin: 0; }
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background: #0d1117;
+        color: #e6edf3;
+        font-family: Inter, system-ui, sans-serif;
+      }
       #root { min-height: 100vh; background: #0d1117; }
+      .boot-msg {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        color: #8b949e;
+        font-size: 14px;
+      }
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-msg">Loading Council…</div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

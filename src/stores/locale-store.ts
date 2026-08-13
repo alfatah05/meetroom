@@ -27,8 +27,10 @@ export const useLocaleStore = create<LocaleState>((set, get) => ({
   hydrate: () => {
     const locale = readStored();
     set({ locale, isHydrated: true });
-    if (typeof document !== "undefined") {
+    try {
       document.documentElement.lang = locale === "id" ? "id" : "en";
+    } catch {
+      /* ignore */
     }
   },
   setLocale: (locale) => {
@@ -38,12 +40,19 @@ export const useLocaleStore = create<LocaleState>((set, get) => ({
       /* ignore */
     }
     set({ locale });
-    if (typeof document !== "undefined") {
+    try {
       document.documentElement.lang = locale === "id" ? "id" : "en";
+    } catch {
+      /* ignore */
     }
   },
   t: (key) => {
-    const { locale } = get();
-    return translations[locale][key] ?? translations.en[key] ?? key;
+    try {
+      const { locale } = get();
+      const table = translations[locale] || translations.en;
+      return (table as Record<string, string>)[key] || translations.en[key] || String(key);
+    } catch {
+      return String(key);
+    }
   },
 }));

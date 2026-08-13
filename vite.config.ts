@@ -3,9 +3,9 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
-// GitHub Pages project site: base = /REPO_NAME/
-// Local / shared hosting: base = ./
-const base = process.env.BASE_PATH || "./";
+// GitHub Actions sets BASE_PATH=/REPO_NAME/ for project sites.
+// Local dev defaults to "/".
+const base = process.env.BASE_PATH || "/";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

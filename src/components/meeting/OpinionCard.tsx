@@ -6,7 +6,7 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
-  TriangleAlert,
+  AlertTriangle,
   X,
   HelpCircle,
   Info,
@@ -27,7 +27,7 @@ const STANCE_META: Record<
   },
   concern: {
     labelKey: "concern",
-    Icon: TriangleAlert,
+    Icon: AlertTriangle,
     className: "text-concern",
     bg: "bg-concern-bg",
   },

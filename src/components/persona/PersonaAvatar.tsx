@@ -4,7 +4,7 @@ import {
   Code2,
   Building2,
   FlaskConical,
-  TriangleAlert,
+  AlertTriangle,
   Shield,
   BarChart3,
   Cog,
@@ -19,14 +19,13 @@ const ICON_MAP: Record<string, LucideIcon> = {
   code: Code2,
   building: Building2,
   flask: FlaskConical,
-  alert: TriangleAlert,
+  alert: AlertTriangle,
   shield: Shield,
   chart: BarChart3,
   cog: Cog,
   user: User,
 };
 
-/** Map legacy emoji or icon keys to Lucide keys */
 const LEGACY: Record<string, string> = {
   "🧠": "brain",
   "🎨": "palette",
@@ -63,11 +62,11 @@ export function PersonaAvatar({
 
   return (
     <div
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-full border border-border bg-card-hover text-accent",
-        sizeClass,
-        className
-      )}
+      className={
+        "flex shrink-0 items-center justify-center rounded-full border border-border bg-card-hover text-accent " +
+        sizeClass +
+        (className ? " " + className : "")
+      }
       aria-hidden
     >
       <Icon className={iconClass} strokeWidth={1.75} />
