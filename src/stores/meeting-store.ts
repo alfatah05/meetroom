@@ -240,10 +240,12 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
       .join("\n");
 
     // Thinking indicators
+    const localeMod = await import("@/stores/locale-store");
+    const loc = localeMod.useLocaleStore.getState();
     set({
       thinking: participants.map((p) => ({
         personaId: p.id,
-        label: `${p.avatar ?? ""} ${p.name} is thinking...`.trim(),
+        label: `${p.name} ${loc.t("thinkingLabel")}`,
       })),
       error: null,
     });
@@ -267,7 +269,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
         thinking: [
           {
             personaId: persona.id,
-            label: `${persona.avatar ?? ""} ${persona.name} is reviewing...`.trim(),
+            label: `${persona.name} ${loc.t("reviewingLabel")}`,
           },
         ],
       });
@@ -279,6 +281,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
           previousOpinions,
           userMessage: trimmed,
           mode: m.mode,
+          language: loc.locale,
         });
         const op: Opinion = {
           id: uuid(),
@@ -315,7 +318,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
         });
       } catch (e) {
         console.error(e);
-        set({ error: "AI provider temporarily unavailable. Try again." });
+        set({ error: loc.t("aiUnavailable") });
       }
     }
 

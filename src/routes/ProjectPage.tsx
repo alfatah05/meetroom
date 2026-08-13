@@ -8,6 +8,8 @@ import { useDecisionStore } from "@/stores/decision-store";
 import { PERSONA_LIBRARY } from "@/data/personas";
 import { stageLabel, formatRelativeTime } from "@/lib/utils";
 import { ArrowLeft, Users, MessageSquare, Plus, CheckCircle2, Download } from "lucide-react";
+import { PersonaAvatar } from "@/components/persona/PersonaAvatar";
+import { useLocaleStore } from "@/stores/locale-store";
 import { exportProject, downloadExport } from "@/lib/export-import";
 
 export function ProjectPage() {
@@ -28,22 +30,23 @@ export function ProjectPage() {
   const project = projects.find((p) => p.id === id);
   const decisions = id ? byProject[id] ?? [] : [];
   const [ioMsg, setIoMsg] = useState<string | null>(null);
+  const t = useLocaleStore((s) => s.t);
 
   async function onExport() {
     if (!id) return;
     try {
       const data = await exportProject(id);
       downloadExport(data);
-      setIoMsg("Export downloaded (no API keys included).");
+      setIoMsg(t("exportDownloaded"));
     } catch (e) {
-      setIoMsg(e instanceof Error ? e.message : "Export failed");
+      setIoMsg(e instanceof Error ? e.message : t("exportFailed"));
     }
   }
 
   if (!isHydrated) {
     return (
       <AppShell>
-        <div className="mx-auto max-w-5xl px-4 py-16 text-center text-muted">Loading...</div>
+        <div className="mx-auto max-w-5xl px-4 py-16 text-center text-muted">{t("loading")}</div>
       </AppShell>
     );
   }
@@ -52,9 +55,9 @@ export function ProjectPage() {
     return (
       <AppShell>
         <div className="mx-auto max-w-5xl px-4 py-16 text-center">
-          <p className="text-muted">Project not found.</p>
+          <p className="text-muted">{t("projectNotFound")}</p>
           <Button to="/" className="mt-4">
-            Back to projects
+            {t("backToProjects")}
           </Button>
         </div>
       </AppShell>
@@ -73,7 +76,7 @@ export function ProjectPage() {
           className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          All projects
+          {t("allProjects")}
         </Link>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -95,7 +98,7 @@ export function ProjectPage() {
           <div className="flex flex-wrap gap-2">
             <Button to={`/project/${id}/team`} variant="outline" size="sm">
               <Users className="h-3.5 w-3.5" />
-              Manage team
+              {t("manageTeam")}
             </Button>
             <Button to={`/project/${id}/decisions`} variant="outline" size="sm">
               <CheckCircle2 className="h-3.5 w-3.5" />
@@ -137,7 +140,7 @@ export function ProjectPage() {
 
         <section className="mt-10">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium uppercase tracking-wider text-muted">Active Team</h2>
+            <h2 className="text-sm font-medium uppercase tracking-wider text-muted">{t("activeTeam")}</h2>
             <Button to={`/project/${id}/team`} variant="ghost" size="sm">
               <Plus className="h-3.5 w-3.5" />
               Hire
@@ -145,9 +148,9 @@ export function ProjectPage() {
           </div>
           {hired.length === 0 ? (
             <div className="mt-3 rounded-lg border border-dashed border-border bg-card/50 px-6 py-10 text-center">
-              <p className="text-sm text-muted">Every project needs a few different perspectives.</p>
+              <p className="text-sm text-muted">{t("needsPerspectives")}</p>
               <Button to={`/project/${id}/team`} className="mt-4" size="sm">
-                Build your team
+                {t("buildYourTeam")}
               </Button>
             </div>
           ) : (
@@ -156,12 +159,12 @@ export function ProjectPage() {
                 (p) =>
                   p && (
                     <li key={p.id} className="flex items-center gap-3 px-4 py-3">
-                      <span className="text-xl">{p.avatar}</span>
+                      <PersonaAvatar avatar={p.avatar} size="sm" />
                       <div className="min-w-0 flex-1">
                         <div className="font-medium">{p.name}</div>
                         <div className="text-xs text-muted">{p.role}</div>
                       </div>
-                      <span className="text-xs text-support">Active</span>
+                      <span className="text-xs text-support">{t("active")}</span>
                     </li>
                   )
               )}
@@ -172,16 +175,16 @@ export function ProjectPage() {
         <section className="mt-10">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium uppercase tracking-wider text-muted">
-              Recent decisions
+              {t("recentDecisions")}
             </h2>
             <Button to={`/project/${id}/decisions`} variant="ghost" size="sm">
-              View all
+              {t("viewAll")}
             </Button>
           </div>
           {decisions.length === 0 ? (
             <div className="mt-3 rounded-lg border border-dashed border-border bg-card/50 px-6 py-8 text-center">
               <p className="text-sm text-muted">
-                Decisions made during meetings will appear here.
+                {t("decisionsAppearHere")}
               </p>
             </div>
           ) : (

@@ -38,8 +38,9 @@ function pickStance(personaId: string, topic: string): Stance {
 function buildResponse(request: AIRequest): PersonaAIResponse {
   const { persona, topic } = request;
   const stance = pickStance(persona.id, topic);
+  const id = request.language === "id";
 
-  const templates: Record<Stance, { main: string; reasoning: string; rec?: string }> = {
+  const templatesEn: Record<Stance, { main: string; reasoning: string; rec?: string }> = {
     support: {
       main: `${topic.replace(/\?$/, "")} aligns with our priorities for this stage.`,
       reasoning: `As ${persona.role}, I focus on ${persona.priorities.slice(0, 2).join(" and ")}. Given the project constraints and ${persona.experienceLevel} experience with ${persona.domainKnowledge[0] || "this domain"}, the upside outweighs the complexity if we keep scope tight.`,
@@ -66,12 +67,43 @@ function buildResponse(request: AIRequest): PersonaAIResponse {
     },
   };
 
+  const templatesId: Record<Stance, { main: string; reasoning: string; rec?: string }> = {
+    support: {
+      main: `${topic.replace(/\?$/, "")} sejalan dengan prioritas kita di tahap ini.`,
+      reasoning: `Sebagai ${persona.role}, saya fokus pada ${persona.priorities.slice(0, 2).join(" dan ")}. Dengan batasan proyek dan pengalaman ${persona.experienceLevel} di ${persona.domainKnowledge[0] || "domain ini"}, manfaatnya lebih besar daripada kompleksitasnya jika scope tetap ketat.`,
+      rec: "Lanjutkan dengan versi minimal dan validasi cepat.",
+    },
+    concern: {
+      main: `Ada risiko atau biaya penting yang harus diakui sebelum berkomitmen.`,
+      reasoning: `Dari sudut pandang ${persona.role}, ${persona.willChallenge[0] || "asumsi yang belum diuji"} relevan di sini. ${persona.communicationStyle}`,
+      rec: "Perjelas kriteria sukses dan mode kegagalan sebelum membangun.",
+    },
+    oppose: {
+      main: `Saya merekomendasikan menolak pendekatan ini dalam bentuknya saat ini.`,
+      reasoning: `Klaim ini bertumpu pada asumsi yang belum didukung bukti. ${persona.objective} Peran saya adalah mengungkap titik lemah: ${persona.willChallenge.slice(0, 2).join("; ")}.`,
+      rec: "Tolak atau tunda sampai bukti lebih kuat.",
+    },
+    uncertain: {
+      main: `Saya belum punya cukup bukti untuk mengambil posisi kuat.`,
+      reasoning: `Diskusi sejauh ini masih menyisakan pertanyaan terbuka soal pengguna, batasan, atau kelayakan teknis. Mengambil sikap tegas sekarang terlalu dini.`,
+      rec: "Kumpulkan satu data konkret atau prototipe lagi.",
+    },
+    information: {
+      main: `Beberapa fakta teknis atau struktural yang perlu diperhatikan.`,
+      reasoning: `Catatan domain dari ${persona.role}: ${persona.expertise.slice(0, 3).join(", ")}. Hal ini membatasi atau memungkinkan opsi yang sedang dibahas.`,
+    },
+  };
+
+  const templates = id ? templatesId : templatesEn;
   const t = templates[stance];
   return {
     stance,
     mainPoint: t.main,
     reasoning: t.reasoning,
-    concerns: stance === "concern" || stance === "oppose" ? [persona.willChallenge[0]].filter(Boolean) as string[] : [],
+    concerns:
+      stance === "concern" || stance === "oppose"
+        ? ([persona.willChallenge[0]].filter(Boolean) as string[])
+        : [],
     recommendation: t.rec,
     confidence: stance === "uncertain" ? 0.45 : stance === "information" ? 0.7 : 0.78,
   };

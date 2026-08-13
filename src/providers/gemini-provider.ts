@@ -3,6 +3,19 @@ import type { AIRequest, AIResponse, PersonaAIResponse, Stance } from "@/types";
 
 const STANCES: Stance[] = ["support", "concern", "oppose", "uncertain", "information"];
 
+function languageInstruction(lang?: string): string {
+  if (lang === "id") {
+    return `LANGUAGE (CRITICAL):
+- Write ALL natural-language fields (mainPoint, reasoning, concerns, recommendation) in Bahasa Indonesia.
+- Keep JSON keys in English exactly as specified.
+- Stance enum values stay in English: support | concern | oppose | uncertain | information.
+- Do not mix English sentences into mainPoint/reasoning unless quoting a technical term.`;
+  }
+  return `LANGUAGE:
+- Write ALL natural-language fields (mainPoint, reasoning, concerns, recommendation) in English.
+- Keep JSON keys in English. Stance enum values stay in English.`;
+}
+
 function buildSystemPrompt(request: AIRequest): string {
   const p = request.persona;
   return `You are ${p.name}, a ${p.role} on a project council.
@@ -26,6 +39,7 @@ Rules:
 - Do not invent sources or research.
 - Challenge assumptions when justified; do not disagree for sport.
 - Keep mainPoint to 1-2 sentences.
+${languageInstruction(request.language)}
 - Respond ONLY with valid JSON matching this schema:
 {
   "stance": "support" | "concern" | "oppose" | "uncertain" | "information",
@@ -45,11 +59,16 @@ function buildUserPrompt(request: AIRequest): string {
           .map((o) => `- ${o.personaName} (${o.stance}): ${o.mainPoint}`)
           .join("\n")
       : "";
+  const langHint =
+    request.language === "id"
+      ? "\n\nJawab dalam Bahasa Indonesia (isi field teks JSON)."
+      : "\n\nAnswer in English (text fields of the JSON).";
   return `${request.projectContext}
 
 Current topic / question:
 ${request.topic}
 ${prev}
+${langHint}
 
 Provide your perspective as JSON only.`;
 }
@@ -149,17 +168,15 @@ export class GeminiProvider implements AIProvider {
       throw err;
     }
 
-    const json = (await res.json()) as {
+    const data = (await res.json()) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
     };
     const text =
-      json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+      data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
     if (!text) throw new Error("Empty response from Gemini");
-
     return {
       content: parseResponse(text),
       providerId: this.id,
-      isMock: false,
     };
   }
 }

@@ -196,6 +196,8 @@ export interface AIRequest {
   previousOpinions?: { personaName: string; stance: Stance; mainPoint: string }[];
   userMessage?: string;
   mode?: MeetingMode;
+  /** UI locale — AI must answer in this language */
+  language?: "en" | "id";
 }
 
 export interface AIResponse {

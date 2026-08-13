@@ -4,14 +4,20 @@ import {
   Code2,
   Building2,
   FlaskConical,
-  TriangleAlert,
   Shield,
   BarChart3,
   Cog,
   User,
   type LucideIcon,
 } from "lucide-react";
+import * as LucideAll from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const lucideMap = LucideAll as unknown as Record<string, LucideIcon>;
+
+// Support both old (AlertTriangle) and new (TriangleAlert) lucide names
+const AlertIcon: LucideIcon =
+  lucideMap.TriangleAlert || lucideMap.AlertTriangle || User;
 
 const ICON_MAP: Record<string, LucideIcon> = {
   brain: Brain,
@@ -19,14 +25,13 @@ const ICON_MAP: Record<string, LucideIcon> = {
   code: Code2,
   building: Building2,
   flask: FlaskConical,
-  alert: TriangleAlert,
+  alert: AlertIcon,
   shield: Shield,
   chart: BarChart3,
   cog: Cog,
   user: User,
 };
 
-/** Map legacy emoji or icon keys to Lucide keys */
 const LEGACY: Record<string, string> = {
   "🧠": "brain",
   "🎨": "palette",

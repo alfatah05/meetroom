@@ -10,6 +10,8 @@ import { DecisionDock } from "@/components/meeting/DecisionDock";
 import { MeetingOverview } from "@/components/meeting/MeetingOverview";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Send, Users } from "lucide-react";
+import { PersonaAvatar } from "@/components/persona/PersonaAvatar";
+import { useLocaleStore } from "@/stores/locale-store";
 import { providerManager } from "@/providers/provider-manager";
 import { useProviderStore } from "@/stores/provider-store";
 
@@ -35,6 +37,7 @@ export function MeetingRoomPage() {
   const [dockOpen, setDockOpen] = useState(false);
   const [providerStatus, setProviderStatus] = useState<string | null>(null);
   const primaryProvider = useProviderStore((s) => s.config.primaryProvider);
+  const t = useLocaleStore((s) => s.t);
   const hydrateProviders = useProviderStore((s) => s.hydrate);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -66,15 +69,15 @@ export function MeetingRoomPage() {
 
   if (!isHydrated) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-muted">Loading...</div>
+      <div className="flex min-h-screen items-center justify-center text-muted">{t("loading")}</div>
     );
   }
 
   if (!project || !id) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <p className="text-muted">Project not found.</p>
-        <Button to="/">Back</Button>
+        <p className="text-muted">{t("projectNotFound")}</p>
+        <Button to="/">{t("back")}</Button>
       </div>
     );
   }
@@ -87,10 +90,10 @@ export function MeetingRoomPage() {
     return (
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-4 text-center">
         <Users className="h-10 w-10 text-muted" />
-        <p className="mt-4 text-lg font-medium">Every project needs a few different perspectives.</p>
-        <p className="mt-2 text-sm text-muted">Hire at least one persona before starting a meeting.</p>
+        <p className="mt-4 text-lg font-medium">{t("needsPerspectives")}</p>
+        <p className="mt-2 text-sm text-muted">{t("hireBeforeMeeting")}</p>
         <Button to={`/project/${id}/team`} className="mt-6">
-          Build your team
+          {t("buildYourTeam")}
         </Button>
       </div>
     );
@@ -110,16 +113,16 @@ export function MeetingRoomPage() {
           </Link>
         </div>
         <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-4 py-12">
-          <h1 className="text-2xl font-semibold tracking-tight">Start a meeting</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("startMeeting")}</h1>
           <p className="mt-1 text-sm text-muted">
-            {hired.length} team members ready · Mock AI provider active
+            {hired.length} {t("teamReady")} · Mock AI
           </p>
-          <label className="mt-8 block text-sm font-medium">Meeting title</label>
+          <label className="mt-8 block text-sm font-medium">{t("meetingTitle")}</label>
           <input
             className="mt-2 w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Should we be offline-first?"
+            placeholder="{t("meetingTitlePlaceholder")}"
           />
           <div className="mt-4 flex flex-wrap gap-2">
             {hired.map(
@@ -127,9 +130,10 @@ export function MeetingRoomPage() {
                 p && (
                   <span
                     key={p.id}
-                    className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs"
                   >
-                    {p.avatar} {p.name}
+                    <PersonaAvatar avatar={p.avatar} size="sm" />
+                    {p.name}
                   </span>
                 )
             )}
@@ -141,7 +145,7 @@ export function MeetingRoomPage() {
               setStarted(true);
             }}
           >
-            Enter Meeting Room
+            {t("enterMeetingRoom")}
           </Button>
         </div>
       </div>
@@ -186,7 +190,7 @@ export function MeetingRoomPage() {
                       key={p.id}
                       className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"
                     >
-                      <span>{p.avatar}</span>
+                      <PersonaAvatar avatar={p.avatar} size="sm" />
                       <span className="truncate">{p.name}</span>
                     </li>
                   )
@@ -201,7 +205,7 @@ export function MeetingRoomPage() {
               {topics.length > 0 && (
                 <div className="mb-6">
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
-                    Discussion topics
+                    {t("discussionTopics")}
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {topics.map((t) => (

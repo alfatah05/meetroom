@@ -7,9 +7,12 @@ import { useProjectStore } from "@/stores/project-store";
 import { PERSONA_LIBRARY, PERSONA_CATEGORIES, getPersonasByCategory } from "@/data/personas";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, ArrowRight, Users } from "lucide-react";
+import { PersonaAvatar } from "@/components/persona/PersonaAvatar";
+import { useLocaleStore } from "@/stores/locale-store";
 import type { Persona } from "@/types";
 
 export function TeamPage() {
+  const t = useLocaleStore((s) => s.t);
   const { id } = useParams<{ id: string }>();
   const {
     projects,
@@ -148,7 +151,7 @@ export function TeamPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start gap-3">
-                <span className="text-3xl">{selectedPersona.avatar}</span>
+                <PersonaAvatar avatar={selectedPersona.avatar} size="lg" />
                 <div>
                   <h3 className="text-xl font-semibold">{selectedPersona.name}</h3>
                   <p className="text-muted">{selectedPersona.role}</p>
@@ -157,19 +160,19 @@ export function TeamPage() {
               <p className="mt-4 text-sm">{selectedPersona.description}</p>
               <dl className="mt-6 space-y-3 text-sm">
                 <div>
-                  <dt className="font-medium text-muted">Objective</dt>
+                  <dt className="font-medium text-muted">{t("objective")}</dt>
                   <dd className="mt-0.5">{selectedPersona.objective}</dd>
                 </div>
                 <div>
-                  <dt className="font-medium text-muted">Will challenge</dt>
+                  <dt className="font-medium text-muted">{t("willChallenge")}</dt>
                   <dd className="mt-0.5">{selectedPersona.willChallenge.join("; ")}</dd>
                 </div>
                 <div>
-                  <dt className="font-medium text-muted">Priorities</dt>
+                  <dt className="font-medium text-muted">{t("priorities")}</dt>
                   <dd className="mt-0.5">{selectedPersona.priorities.join(" · ")}</dd>
                 </div>
                 <div>
-                  <dt className="font-medium text-muted">Communication</dt>
+                  <dt className="font-medium text-muted">{t("communication")}</dt>
                   <dd className="mt-0.5">{selectedPersona.communicationStyle}</dd>
                 </div>
               </dl>
